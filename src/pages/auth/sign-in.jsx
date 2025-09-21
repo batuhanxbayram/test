@@ -42,7 +42,7 @@ export function SignIn() {
   return (
       <section
           className="min-h-screen flex items-center justify-center bg-cover bg-center"
-          style={{ backgroundImage: `url(/img/pattern.png)` }} // Arka plan resminizin yolu
+          style={{ backgroundImage: `url(/img/background.jpg)` }} // Arka plan resminizin yolu
       >
         <Card className="w-full max-w-md p-8 bg-white/90 backdrop-blur-sm shadow-2xl rounded-2xl">
           <div className="text-center">
