@@ -1,7 +1,11 @@
-import React, { useState } from "react"; // YENİ: useState eklendi
+import React, { useState } from "react";
 import { Card, Input, Button, Typography } from "@material-tailwind/react";
 import { Link, useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
+import {
+  useMaterialTailwindController,
+  setUserRole,
+} from "@/context";
 
 export function SignIn() {
 
@@ -36,6 +40,7 @@ export function SignIn() {
         const decodedToken = jwtDecode(token);
         const userRoleClaim = decodedToken.role || decodedToken["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
         const userRole = userRoleClaim ? userRoleClaim.toLowerCase() : null;
+        console.log(userRole);
 
         if (userRole) {
           setUserRole(dispatch, userRole);
@@ -52,6 +57,8 @@ export function SignIn() {
       alert("Sunucuya bağlanılamadı.");
     }
   };
+
+
 
   return (
       <section
