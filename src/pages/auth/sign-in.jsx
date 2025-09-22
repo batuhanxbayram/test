@@ -1,8 +1,12 @@
 import React, { useState } from "react"; // YENİ: useState eklendi
 import { Card, Input, Button, Typography } from "@material-tailwind/react";
-import { Link, useNavigate } from "react-router-dom"; // YENİ: useNavigate eklendi
+import { Link, useNavigate } from "react-router-dom";
+import { jwtDecode } from "jwt-decode";
 
 export function SignIn() {
+
+
+  const [, dispatch] = useMaterialTailwindController();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
@@ -29,6 +33,16 @@ export function SignIn() {
 
         localStorage.setItem("authToken", token);
         console.log("Giriş Başarılı!");
+        const decodedToken = jwtDecode(token);
+        const userRoleClaim = decodedToken.role || decodedToken["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
+        const userRole = userRoleClaim ? userRoleClaim.toLowerCase() : null;
+
+        if (userRole) {
+          setUserRole(dispatch, userRole);
+          localStorage.setItem("userRole", userRole);
+        }
+
+
         navigate("/dashboard/home");
       } else {
         alert("Kullanıcı adı veya şifre hatalı!");
