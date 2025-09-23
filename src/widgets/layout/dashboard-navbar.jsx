@@ -1,18 +1,23 @@
 import { ArrowRightOnRectangleIcon, Bars3Icon } from "@heroicons/react/24/solid";
 import { IconButton, Input, Navbar, Typography, Breadcrumbs } from "@material-tailwind/react";
 import { useMaterialTailwindController, setOpenSidenav } from "@/context";
-import { useLocation, Link } from "react-router-dom";
+import { useLocation, Link, useNavigate } from "react-router-dom"; // 🔹 useNavigate eklendi
 
 export function DashboardNavbar() {
   const [controller, dispatch] = useMaterialTailwindController();
   const { fixedNavbar, openSidenav } = controller;
   const { pathname } = useLocation();
   const [layout, page] = pathname.split("/").filter((el) => el !== "");
+  
 
-  const handleLogout = () => {
-    // Buraya gerçek logout fonksiyonunu ekleyebilirsin
-    alert("Çıkış yapıldı!");
-  };
+  const navigate = useNavigate();
+
+const handleLogout = () => {
+  localStorage.removeItem("authToken"); // Token sil
+  localStorage.removeItem("userRole");  // varsa rol bilgisini de sil
+  navigate("/auth/sign-in"); // Login ekranına yönlendir
+};
+
 
   return (
     <Navbar
@@ -69,7 +74,7 @@ export function DashboardNavbar() {
           <IconButton
             variant="text"
             color="red"
-            onClick={handleLogout}
+            onClick={handleLogout} // 🔹 logout çağrıldı
             className="rounded-full hover:bg-red-100 transition-colors"
           >
             <ArrowRightOnRectangleIcon className="h-6 w-6 text-red-500" />
