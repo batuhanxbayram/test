@@ -5,9 +5,13 @@ import {
   InformationCircleIcon,
   ServerStackIcon,
   RectangleStackIcon,
+  TruckIcon,
+  MapIcon,
+  Squares2X2Icon,
 } from "@heroicons/react/24/solid";
 import { Home, Profile, Tables, Notifications } from "@/pages/dashboard";
 import { SignIn } from "@/pages/auth";
+
 
 
 const icon = {
@@ -19,8 +23,8 @@ export const routes = [
     layout: "dashboard",
     pages: [
       {
-        icon: <HomeIcon {...icon} />,
-        name: "dashboard",
+        icon: <Squares2X2Icon {...icon} />,
+        name: "Araç Sıraları",
         path: "/home",
         element: <Home />,
         // roles eklenmediği için giriş yapan herkes görebilir.
@@ -28,21 +32,21 @@ export const routes = [
       },
       {
         icon: <UserCircleIcon {...icon} />,
-        name: "AşktanemDilara",
+        name: "Kullanıcılar",
         path: "/profile",
         element: <Profile />,
-        // roles eklenmediği için giriş yapan herkes görebilir.
+        roles: ['admin'],
       },
       {
-        icon: <TableCellsIcon {...icon} />,
-        name: "tables",
+        icon: <TruckIcon {...icon} />,
+        name: "Araçlar",
         path: "/tables",
         element: <Tables />,
         roles: ['admin'], // YENİ: Sadece adminler görebilir.
       },
       {
-        icon: <InformationCircleIcon {...icon} />,
-        name: "notifications",
+        icon: <MapIcon {...icon} />,
+        name: "Güzergahlar",
         path: "/notifications",
         element: <Notifications />,
         roles: ['admin'], // YENİ: Sadece adminler görebilir.
