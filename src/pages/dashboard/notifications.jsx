@@ -6,59 +6,77 @@ import {
   CardBody,
   Button,
 } from "@material-tailwind/react";
-import apiClient from "../../api/axiosConfig.js"; // apiClient yolunu projenize göre güncelleyin
-import { AddRouteModal } from "@/widgets/layout/AddRouteModal.jsx"; // 1. Yeni modal'ı import et
+import apiClient from "../../api/axiosConfig.js";
+import { AddRouteModal } from "@/widgets/layout/AddRouteModal";
+import { EditRouteModal } from "@/widgets/layout/EditRouteModal"; // 1. Edit modal'ı import et
 
 export function Notifications() {
   const [routes, setRoutes] = useState([]);
-  // 2. Modal'ın görünürlüğünü kontrol etmek için state ekle
-  const [openAddModal, setOpenAddModal] = useState(false);
 
-  // Modal'ı açıp kapatan fonksiyon
-  const handleOpenAddModal = () => setOpenAddModal(!openAddModal);
+  // "Ekle" modalı için state'ler
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const handleOpenAddModal = () => setAddModalOpen(!addModalOpen);
+
+  // 2. "Düzenle" modalı için yeni state'ler
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [currentRoute, setCurrentRoute] = useState(null); // Düzenlenecek güzergahı tutar
+
+  // Düzenleme modal'ını açan fonksiyon
+  const handleOpenEditModal = (route) => {
+    setCurrentRoute(route);
+    setEditModalOpen(true);
+  };
+
+  // Düzenleme modal'ını kapatan fonksiyon
+  const handleCloseEditModal = () => {
+    setEditModalOpen(false);
+    setCurrentRoute(null);
+  };
+
+  // Güzergah listesini API'den çeken ana fonksiyon
+  const fetchRoutes = async () => {
+    try {
+      const response = await apiClient.get("/admin/routes");
+      setRoutes(response.data);
+    } catch (error) {
+      console.error("Güzergahları çekerken hata oluştu:", error);
+    }
+  };
 
   useEffect(() => {
-    const fetchRoutes = async () => {
-      try {
-        const response = await apiClient.get("/admin/routes");
-        setRoutes(response.data);
-      } catch (error) {
-        console.error("Güzergahları çekerken hata oluştu:", error);
-      }
-    };
     fetchRoutes();
   }, []);
+
+  // Ekleme, silme veya güncelleme sonrası listeyi yeniden çekmek için
+  const handleDataChange = () => {
+    fetchRoutes();
+  };
 
   const handleDelete = async (routeId) => {
     if (window.confirm("Bu güzergahı silmek istediğinizden emin misiniz?")) {
       try {
         await apiClient.delete(`/admin/routes/${routeId}`);
-        setRoutes(routes.filter((route) => route.id !== routeId));
-        alert("Güzergah başarıyla silindi.");
+        handleDataChange(); // Silme sonrası listeyi yenile
       } catch (error) {
         console.error("Güzergah silinirken hata oluştu:", error);
       }
     }
   };
 
-  // 3. Yeni güzergah eklendiğinde listeyi güncelleyen callback fonksiyonu
-  const handleRouteAdded = (newRoute) => {
-    setRoutes(prevRoutes => [...prevRoutes, newRoute]);
-  };
-
-  // Düzenleme fonksiyonunu şimdilik placeholder olarak bırakıyoruz.
-  // Bunun için de ayrı bir "EditRouteModal" bileşeni oluşturulabilir.
-  const handleEditRoute = (route) => {
-    alert(`Düzenleme işlemi için "${route.routeName}" seçildi. (Modal eklenecek)`);
-  };
-
   return (
       <>
-        {/* 4. Modal bileşenini sayfaya ekle ve proplarını ver */}
         <AddRouteModal
-            open={openAddModal}
+            open={addModalOpen}
             handleOpen={handleOpenAddModal}
-            onRouteAdded={handleRouteAdded}
+            onRouteAdded={handleDataChange}
+        />
+
+        {/* 3. Yeni düzenleme modalını sayfaya ekle */}
+        <EditRouteModal
+            open={editModalOpen}
+            handleOpen={handleCloseEditModal}
+            routeToEdit={currentRoute}
+            onRouteUpdated={handleDataChange}
         />
 
         <div className="mx-auto my-20 flex max-w-screen-lg flex-col gap-8">
@@ -71,7 +89,6 @@ export function Notifications() {
               <Typography variant="h6" color="white">
                 Güzergahlar
               </Typography>
-              {/* 5. Butonun onClick olayını modal'ı açacak şekilde güncelle */}
               <Button
                   size="sm"
                   className="bg-green-700 text-white hover:bg-green-800"
@@ -85,7 +102,7 @@ export function Notifications() {
                 <thead>
                 <tr>
                   {["Güzergah", "İşlem"].map((el) => (
-                      <th key={el} className="border-b border-blue-gray-50 py-3 px-5 text-left">
+                      <th key={el} className={`border-b border-blue-gray-50 py-3 px-5 text-left ${el === "İşlem" ? "text-right" : ""}`}>
                         <Typography variant="small" className="text-[11px] font-bold uppercase text-blue-gray-400">
                           {el}
                         </Typography>
@@ -102,10 +119,21 @@ export function Notifications() {
                         </Typography>
                       </td>
                       <td className="py-3 px-5 border-b border-blue-gray-50 text-right space-x-1">
-                        <Button size="sm" variant="text" color="blue" onClick={() => handleEditRoute(route)}>
+                        {/* 4. Düzenle butonunun onClick olayını güncelle */}
+                        <Button
+                            size="sm"
+                            variant="text"
+                            color="blue"
+                            onClick={() => handleOpenEditModal(route)}
+                        >
                           Düzenle
                         </Button>
-                        <Button size="sm" variant="text" color="red" onClick={() => handleDelete(route.id)}>
+                        <Button
+                            size="sm"
+                            variant="text"
+                            color="red"
+                            onClick={() => handleDelete(route.id)}
+                        >
                           Sil
                         </Button>
                       </td>
