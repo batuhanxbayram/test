@@ -8,11 +8,11 @@ import {
   TruckIcon,
   MapIcon,
   Squares2X2Icon,
+  QueueListIcon, // 1. YENİ: Uygun bir ikon import edelim
 } from "@heroicons/react/24/solid";
-import { Home, Profile, Tables, Notifications } from "@/pages/dashboard";
+// 2. YENİ: Yeni sayfa bileşenimizi import edelim
+import { Home, Profile, Tables, Notifications, QueueManagementPage } from "@/pages/dashboard";
 import { SignIn } from "@/pages/auth";
-
-
 
 const icon = {
   className: "w-5 h-5 text-inherit",
@@ -27,8 +27,14 @@ export const routes = [
         name: "Araç Sıraları",
         path: "/home",
         element: <Home />,
-        // roles eklenmediği için giriş yapan herkes görebilir.
-        // İsterseniz roles: ['admin', 'user'] de ekleyebilirsiniz.
+      },
+      // 3. YENİ: "Sıra Yönetimi" sayfasını menüye ekleyelim
+      {
+        icon: <QueueListIcon {...icon} />,
+        name: "Sıra Yönetimi",
+        path: "/queue-management", // Tarayıcıda görünecek adres
+        element: <QueueManagementPage />,
+        roles: ['admin'], // Sadece adminler görebilir
       },
       {
         icon: <UserCircleIcon {...icon} />,
@@ -42,14 +48,14 @@ export const routes = [
         name: "Araçlar",
         path: "/tables",
         element: <Tables />,
-        roles: ['admin'], // YENİ: Sadece adminler görebilir.
+        roles: ['admin'],
       },
       {
         icon: <MapIcon {...icon} />,
         name: "Güzergahlar",
         path: "/notifications",
         element: <Notifications />,
-        roles: ['admin'], // YENİ: Sadece adminler görebilir.
+        roles: ['admin'],
       },
     ],
   },
