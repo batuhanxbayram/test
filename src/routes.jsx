@@ -20,6 +20,7 @@ import {
   QueueManagementPage
 } from "@/pages/dashboard";
 
+
 import { SignIn } from "@/pages/auth";
 
 const icon = {
