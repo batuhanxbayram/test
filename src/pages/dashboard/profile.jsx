@@ -1,23 +1,33 @@
 import React, { useState, useEffect } from "react";
-import {
-  Card,
-  CardHeader,
-  CardBody,
-  Typography,
-  Button,
-} from "@material-tailwind/react";
+import { Card, CardHeader, CardBody, Typography, Button } from "@material-tailwind/react";
 import apiClient from "../../api/axiosConfig.js";
 import { AddUserModal } from "@/widgets/layout/AddUserModal";
+import { EditUserModal } from "@/widgets/layout/EditUserModal";
 
 export function Profile() {
   const [users, setUsers] = useState([]);
-  const [openModal, setOpenModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const handleOpenModal = () => setOpenModal(!openModal);
+  // Ekleme ve Düzenleme Modalları için state'ler
+  const [openAddModal, setOpenAddModal] = useState(false);
+  const [openEditModal, setOpenEditModal] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
 
-  // Veri çekme mantığını yeniden kullanılabilir bir fonksiyon içine aldık
+  const handleOpenAddModal = () => setOpenAddModal(true);
+  const handleCloseAddModal = () => setOpenAddModal(false);
+
+  // Düzenleme modalını açan fonksiyon
+  const handleOpenEditModal = (user) => {
+    setCurrentUser(user);
+    setOpenEditModal(true);
+  };
+  // Düzenleme modalını kapatan fonksiyon
+  const handleCloseEditModal = () => {
+    setCurrentUser(null);
+    setOpenEditModal(false);
+  };
+
   const fetchUsers = async () => {
     try {
       setLoading(true);
@@ -32,12 +42,11 @@ export function Profile() {
     }
   };
 
-  // Bileşen ilk yüklendiğinde kullanıcıları çek
   useEffect(() => {
     fetchUsers();
   }, []);
 
-  // Yeni kullanıcı eklendiğinde veya silindiğinde listeyi yeniden çek
+  // Ekleme, silme veya güncelleme sonrası listeyi yeniden çek
   const handleDataChange = () => {
     fetchUsers();
   };
@@ -59,13 +68,14 @@ export function Profile() {
 
   return (
       <>
-        <AddUserModal open={openModal} handleOpen={handleOpenModal} onUserAdded={handleDataChange} />
+        <AddUserModal open={openAddModal} handleOpen={handleCloseAddModal} onUserAdded={handleDataChange} />
+        <EditUserModal open={openEditModal} handleOpen={handleCloseEditModal} userToEdit={currentUser} onUserUpdated={handleDataChange} />
 
         <div className="mt-12 mb-8 flex flex-col gap-12">
           <Card>
             <CardHeader variant="gradient" color="gray" className="mb-4 p-6 flex justify-between items-center">
               <Typography variant="h6" color="white">Kullanıcılar</Typography>
-              <Button size="sm" className="bg-green-700 text-white hover:bg-green-800" onClick={handleOpenModal}>
+              <Button size="sm" className="bg-green-700 text-white hover:bg-green-800" onClick={handleOpenAddModal}>
                 Kullanıcı Ekle
               </Button>
             </CardHeader>
@@ -74,7 +84,7 @@ export function Profile() {
                 <thead>
                 <tr>
                   {["Tam Ad", "Plaka", "Telefon", "İşlem"].map((el) => (
-                      <th key={el} className="border-b border-blue-gray-50 py-3 px-5 text-left">
+                      <th key={el} className={`border-b border-blue-gray-50 py-3 px-5 text-left ${el === "İşlem" ? "text-right" : ""}`}>
                         <Typography variant="small" className="font-bold uppercase text-blue-gray-400">{el}</Typography>
                       </th>
                   ))}
@@ -93,8 +103,10 @@ export function Profile() {
                         <Typography className="text-xs font-normal text-blue-gray-500">{user.phoneNumber}</Typography>
                       </td>
                       <td className="py-3 px-5 border-b border-blue-gray-50 text-right">
-                        <Button size="xs" variant="text" color="blue">Düzenle</Button>
-                        <Button size="xs" variant="text" color="red" onClick={() => handleDeleteUser(user.id, user.fullName)}>Sil</Button>
+                        {/* 3. Düzenle butonunun onClick olayı güncellendi */}
+                        <Button size="sm" variant="text" color="blue" onClick={() => handleOpenEditModal(user)}>Düzenle</Button>
+                        {/* 4. Buton boyutu `xs`'den `sm`'ye çevrildi */}
+                        <Button size="sm" variant="text" color="red" onClick={() => handleDeleteUser(user.id, user.fullName)}>Sil</Button>
                       </td>
                     </tr>
                 ))}
