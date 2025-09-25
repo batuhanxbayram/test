@@ -11,7 +11,7 @@ import {
   QueueListIcon, // 1. YENİ: Sıra Yönetimi sayfası için gerekli ikonu import edelim
 } from "@heroicons/react/24/solid";
 
-
+// 1. YENİ: Yeni sayfa bileşenimizi de diğerlerinin yanına import edelim
 import {
   Home,
   Profile,
@@ -19,6 +19,7 @@ import {
   Notifications,
   QueueManagementPage
 } from "@/pages/dashboard";
+
 
 import { SignIn } from "@/pages/auth";
 
