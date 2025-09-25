@@ -1,18 +1,24 @@
+3
+
 import {
-  HomeIcon,
   UserCircleIcon,
-  TableCellsIcon,
-  InformationCircleIcon,
-  ServerStackIcon,
-  RectangleStackIcon,
   TruckIcon,
   MapIcon,
   Squares2X2Icon,
-  QueueListIcon, // 1. YENİ: Uygun bir ikon import edelim
+  QueueListIcon,
+  ServerStackIcon,
 } from "@heroicons/react/24/solid";
-// 2. YENİ: Yeni sayfa bileşenimizi import edelim
-import { Home, Profile, Tables, Notifications, QueueManagementPage } from "@/pages/dashboard";
+
+// Gerekli tüm sayfa bileşenlerini tek bir yerden import ediyoruz.
+import {
+  Home,
+  Profile,
+  Tables,
+  Notifications,
+  QueueManagementPage,
+} from "@/pages/dashboard";
 import { SignIn } from "@/pages/auth";
+
 
 const icon = {
   className: "w-5 h-5 text-inherit",
@@ -24,35 +30,34 @@ export const routes = [
     pages: [
       {
         icon: <Squares2X2Icon {...icon} />,
-        name: "Araç Sıraları",
+        name: "Dashboard",
         path: "/home",
         element: <Home />,
       },
-      // 3. YENİ: "Sıra Yönetimi" sayfasını menüye ekleyelim
       {
         icon: <QueueListIcon {...icon} />,
-        name: "Sıra Yönetimi",
-        path: "/queue-management", // Tarayıcıda görünecek adres
+        name: "Sıra Yönetimi", // YENİ: Sıraları yönettiğimiz (araç ekle/çıkar) sayfa
+        path: "/queue-management",
         element: <QueueManagementPage />,
-        roles: ['admin'], // Sadece adminler görebilir
+        roles: ['admin'],
       },
       {
         icon: <UserCircleIcon {...icon} />,
-        name: "Kullanıcılar",
+        name: "Kullanıcılar", // KORUNDU: Kullanıcıları yönettiğimiz sayfa
         path: "/profile",
         element: <Profile />,
         roles: ['admin'],
       },
       {
         icon: <TruckIcon {...icon} />,
-        name: "Araçlar",
+        name: "Araçlar", // KORUNDU: Araçları yönettiğimiz sayfa
         path: "/tables",
         element: <Tables />,
         roles: ['admin'],
       },
       {
         icon: <MapIcon {...icon} />,
-        name: "Güzergahlar",
+        name: "Güzergahlar", // KORUNDU: Güzergahları yönettiğimiz (ekle/düzenle/sil) sayfa
         path: "/notifications",
         element: <Notifications />,
         roles: ['admin'],
