@@ -7,17 +7,32 @@ import {
   Configurator,
   Footer,
 } from "@/widgets/layout";
-import routes from "@/routes";
+import { routes } from "../routes"; // routes.js dosyasından routes'u import edin
 import { useMaterialTailwindController, setOpenConfigurator } from "@/context";
 
 export function Dashboard() {
   const [controller, dispatch] = useMaterialTailwindController();
   const { sidenavType } = controller;
 
+  // Sidenav için sadece menüde görünür olması gereken rotaları filtreliyoruz.
+  const visibleRoutes = routes.map((group) => ({
+    ...group,
+    pages: group.pages.filter((page) => !page.isHidden),
+  }));
+
+  // Bu kısım ise tüm rotaları işleyecek, hidden olanlar dahil.
+  // Bu sayede, /routes/:routeId gibi menüde olmayan yollar da çalışacaktır.
+  const allRoutes = routes.map(({ layout, pages }) =>
+    layout === "dashboard" &&
+    pages.map(({ path, element }) => (
+      <Route exact path={path} element={element} key={path} />
+    ))
+  );
+
   return (
     <div className="min-h-screen bg-blue-gray-50/50">
       <Sidenav
-        routes={routes}
+        routes={visibleRoutes} // Sadece görünür rotaları Sidenav'a gönderiyoruz
         brandImg={
           sidenavType === "dark" ? "/img/logo-ct.png" : "/img/logo-ct-dark.png"
         }
@@ -35,13 +50,7 @@ export function Dashboard() {
           <Cog6ToothIcon className="h-5 w-5" />
         </IconButton>
         <Routes>
-          {routes.map(
-            ({ layout, pages }) =>
-              layout === "dashboard" &&
-              pages.map(({ path, element }) => (
-                <Route exact path={path} element={element} />
-              ))
-          )}
+          {allRoutes}
         </Routes>
         <div className="text-blue-gray-600">
           <Footer />
