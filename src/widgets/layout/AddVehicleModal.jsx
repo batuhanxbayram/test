@@ -10,6 +10,8 @@ import {
     Option,
     Typography,
 } from "@material-tailwind/react";
+// TOAST ENTEGRASYONU
+import { toast } from 'react-toastify'; 
 import apiClient from "../../api/axiosConfig.js";
 
 export function AddVehicleModal({ open, handleOpen, onVehicleAdded }) {
@@ -24,14 +26,18 @@ export function AddVehicleModal({ open, handleOpen, onVehicleAdded }) {
 
     useEffect(() => {
         if (open) {
-            // DEĞİŞİKLİK: Backend'de oluşturduğumuz yeni ve filtrelenmiş endpoint'i kullanıyoruz.
+            // DEĞİŞİKLİK: Kullanıcı listesi çekme hatası Toast ile bildirilecek
             apiClient.get("/Users/without-vehicle")
                 .then(response => {
                     setUsers(response.data);
+                    // Hata olursa modal kapanıp açıldığında temizlenmeli
+                    setError(""); 
                 })
                 .catch(err => {
                     console.error("Kullanıcılar çekilirken hata oluştu:", err);
-                    setError("Atanabilir kullanıcı listesi yüklenemedi.");
+                    const msg = "Atanabilir kullanıcı listesi yüklenemedi.";
+                    setError(msg);
+                    toast.error(msg); // Toast ile bildir
                 });
         }
     }, [open]);
@@ -57,16 +63,27 @@ export function AddVehicleModal({ open, handleOpen, onVehicleAdded }) {
 
     const handleSubmit = async () => {
         if (!formData.licensePlate || !formData.appUserId) {
-            setError("Plaka ve Kullanıcı alanları zorunludur.");
+            const msg = "Plaka ve Kullanıcı alanları zorunludur.";
+            setError(msg);
+            toast.error(msg); // Toast ile bildir
             return;
         }
+        
         try {
             await apiClient.post("/admin/vehicles", formData);
-            alert("Araç başarıyla eklendi!");
+            
+            // Standart alert yerine BAŞARI TOAST'ı göster
+            toast.success(`'${formData.licensePlate}' plakalı araç başarıyla eklendi!`, { position: "top-right" });
+
             onVehicleAdded();
             handleClose();
         } catch (err) {
-            setError(err.response?.data || "Bir hata oluştu.");
+            console.error("Araç eklenirken hata:", err);
+            
+            // Backend'den gelen spesifik hata mesajını çek ve TOAST ile göster
+            const apiError = err.response?.data?.message || err.response?.data?.error || "Araç eklenirken beklenmedik bir hata oluştu.";
+            setError(apiError); // Local hata gösterimi için de tutabiliriz
+            toast.error(apiError);
         }
     };
 

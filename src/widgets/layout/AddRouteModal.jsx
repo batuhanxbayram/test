@@ -8,15 +8,17 @@ import {
     Input,
     Typography,
 } from "@material-tailwind/react";
+// TOAST ENTEGRASYONU
+import { toast } from 'react-toastify'; 
 import apiClient from "../../api/axiosConfig.js";
 
 export function AddRouteModal({ open, handleOpen, onRouteAdded }) {
     const [routeName, setRouteName] = useState("");
-    const [error, setError] = useState("");
+    const [localError, setLocalError] = useState(""); // Hata mesajını local'de tutuyoruz
 
     const clearForm = () => {
         setRouteName("");
-        setError("");
+        setLocalError("");
     };
 
     const handleClose = () => {
@@ -26,20 +28,26 @@ export function AddRouteModal({ open, handleOpen, onRouteAdded }) {
 
     const handleSubmit = async () => {
         if (!routeName.trim()) {
-            setError("Güzergah adı boş olamaz.");
+            setLocalError("Güzergah adı boş olamaz.");
+            toast.error("Güzergah adı boş olamaz."); // Toast ile de bildir
             return;
         }
 
         try {
-            // CreateRouteDto'ya uygun şekilde { "routeName": "değer" } gönderiyoruz
             const response = await apiClient.post("/admin/routes", { routeName });
-            alert("Güzergah başarıyla eklendi!");
-            onRouteAdded(response.data); // Ana listeyi anında güncellemek için
-            handleClose(); // Formu temizle ve modal'ı kapat
+            
+            // Standart alert yerine BAŞARI TOAST'ı göster
+            toast.success(`${routeName} başarıyla eklendi!`, { position: "top-right" });
+            
+            onRouteAdded(response.data); // Ana listeyi yenile
+            handleClose(); 
         } catch (err) {
             console.error("Güzergah eklenirken hata:", err);
-            // Backend'den gelen "Bu rota adı zaten mevcut." gibi hataları göster
-            setError(err.response?.data || "Bir hata oluştu.");
+            
+            // Backend'den gelen spesifik hata mesajını çek ve TOAST ile göster
+            const apiError = err.response?.data?.message || err.response?.data?.error || "Bir hata oluştu.";
+            setLocalError(apiError);
+            toast.error(apiError);
         }
     };
 
@@ -47,12 +55,13 @@ export function AddRouteModal({ open, handleOpen, onRouteAdded }) {
         <Dialog open={open} handler={handleClose}>
             <DialogHeader>Yeni Güzergah Ekle</DialogHeader>
             <DialogBody divider>
-                {error && <Typography color="red" variant="small" className="mb-2">{error}</Typography>}
+                {/* Local hata gösterimi için typography */}
+                {localError && <Typography color="red" variant="small" className="mb-2">{localError}</Typography>}
                 <Input
                     label="Güzergah Adı *"
                     value={routeName}
                     onChange={(e) => setRouteName(e.target.value)}
-                    error={!!error} // Hata varsa input'u kırmızı yap
+                    error={!!localError} // Hata varsa input'u kırmızı yap
                 />
             </DialogBody>
             <DialogFooter>
