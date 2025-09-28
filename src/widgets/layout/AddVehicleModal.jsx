@@ -14,6 +14,10 @@ import {
 import { toast } from 'react-toastify'; 
 import apiClient from "../../api/axiosConfig.js";
 
+// TÜRKİYE PLAKA FORMATI REGEX KURALI: 2 Rakam + Boşluk(Ops.) + 1-3 Büyük Harf + Boşluk(Ops.) + 1-4 Rakam
+const TURKISH_PLATE_REGEX = /^(\d{2})\s*([A-Z]{1,3})\s*(\d{1,4})$/;
+
+
 export function AddVehicleModal({ open, handleOpen, onVehicleAdded }) {
     const [users, setUsers] = useState([]);
     const [formData, setFormData] = useState({
@@ -26,25 +30,28 @@ export function AddVehicleModal({ open, handleOpen, onVehicleAdded }) {
 
     useEffect(() => {
         if (open) {
-            // DEĞİŞİKLİK: Kullanıcı listesi çekme hatası Toast ile bildirilecek
+            // ... (Kullanıcıları çekme kodu)
             apiClient.get("/Users/without-vehicle")
                 .then(response => {
                     setUsers(response.data);
-                    // Hata olursa modal kapanıp açıldığında temizlenmeli
                     setError(""); 
                 })
                 .catch(err => {
                     console.error("Kullanıcılar çekilirken hata oluştu:", err);
                     const msg = "Atanabilir kullanıcı listesi yüklenemedi.";
                     setError(msg);
-                    toast.error(msg); // Toast ile bildir
+                    toast.error(msg);
                 });
         }
     }, [open]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+        
+        // Plaka girişini her zaman büyük harfe dönüştür
+        const newValue = name === 'licensePlate' ? value.toUpperCase() : value;
+
+        setFormData(prev => ({ ...prev, [name]: newValue }));
     };
 
     const handleSelectChange = (value) => {
@@ -62,27 +69,43 @@ export function AddVehicleModal({ open, handleOpen, onVehicleAdded }) {
     }
 
     const handleSubmit = async () => {
+        // Zorunlu alan kontrolü
         if (!formData.licensePlate || !formData.appUserId) {
             const msg = "Plaka ve Kullanıcı alanları zorunludur.";
             setError(msg);
-            toast.error(msg); // Toast ile bildir
+            toast.error(msg); 
+            return;
+        }
+
+        // 🎯 YENİ PLAKA FORMATI KONTROLÜ
+        // Plakayı boşlukları temizleyerek kontrol et
+        const cleanedPlate = formData.licensePlate.trim().replace(/\s/g, ''); 
+        
+        if (!TURKISH_PLATE_REGEX.test(formData.licensePlate.trim())) {
+            const msg = "Plaka formatı uygun değil.";
+            setError(msg);
+            toast.error(msg);
             return;
         }
         
         try {
-            await apiClient.post("/admin/vehicles", formData);
+            // API'a göndermeden önce plakadaki gereksiz boşlukları temizleyebiliriz.
+            const payload = { 
+                ...formData,
+                licensePlate: formData.licensePlate.trim().replace(/\s+/g, '') // Birden fazla boşluğu tek boşluğa veya hiç boşluğa dönüştürme
+            };
             
-            // Standart alert yerine BAŞARI TOAST'ı göster
+            await apiClient.post("/admin/vehicles", payload);
+            
             toast.success(`'${formData.licensePlate}' plakalı araç başarıyla eklendi!`, { position: "top-right" });
 
             onVehicleAdded();
             handleClose();
         } catch (err) {
-            console.error("Araç eklenirken hata:", err);
+            console.error("Araç eklenirken hata:", err.response || err);
             
-            // Backend'den gelen spesifik hata mesajını çek ve TOAST ile göster
             const apiError = err.response?.data?.message || err.response?.data?.error || "Araç eklenirken beklenmedik bir hata oluştu.";
-            setError(apiError); // Local hata gösterimi için de tutabiliriz
+            setError(apiError);
             toast.error(apiError);
         }
     };
@@ -92,7 +115,15 @@ export function AddVehicleModal({ open, handleOpen, onVehicleAdded }) {
             <DialogHeader>Yeni Araç Ekle</DialogHeader>
             <DialogBody divider className="flex flex-col gap-4">
                 {error && <Typography color="red" variant="small">{error}</Typography>}
-                <Input label="Plaka *" name="licensePlate" value={formData.licensePlate} onChange={handleChange} />
+                
+                {/* Plaka girişi: Artık her harf büyük yazılıyor */}
+                <Input 
+                    label="Plaka *" 
+                    name="licensePlate" 
+                    value={formData.licensePlate} 
+                    onChange={handleChange} 
+                />
+                
                 <Select label="Kullanıcı Seçiniz *" name="appUserId" onChange={handleSelectChange} value={formData.appUserId}>
                     {users.length > 0 ? (
                         users.map(user => <Option key={user.id} value={user.id}>{user.fullName}</Option>)
