@@ -3,16 +3,16 @@ import {
     Button, Dialog, DialogHeader, DialogBody, DialogFooter, Input, Typography,
 } from "@material-tailwind/react";
 import apiClient from "../../api/axiosConfig.js";
+import { toast } from 'react-toastify'; // alert yerine toast kullanmak daha modern bir yaklaşım
 
 export function EditUserModal({ open, handleOpen, userToEdit, onUserUpdated }) {
     const [formData, setFormData] = useState({
         fullName: "",
-        userName: "",
+        userName: "", // userName'i formda tutmaya devam ediyoruz, sadece göstermek için.
         password: "",
         confirmPassword: "",
     });
     const [error, setError] = useState("");
-
 
     useEffect(() => {
         if (userToEdit) {
@@ -36,31 +36,30 @@ export function EditUserModal({ open, handleOpen, userToEdit, onUserUpdated }) {
     };
 
     const handleSubmit = async () => {
-
         if (formData.password && formData.password !== formData.confirmPassword) {
             setError("Girilen şifreler uyuşmuyor.");
             return;
         }
 
-
+        // DEĞİŞİKLİK: Payload'dan 'userName' kaldırıldı.
         const payload = {
             fullName: formData.fullName,
-            userName: formData.userName,
         };
+
         if (formData.password) {
             payload.password = formData.password;
-            payload.confirmPassword = formData.confirmPassword;
         }
 
         try {
             await apiClient.put(`/Users/${userToEdit.id}`, payload);
-            alert("Kullanıcı başarıyla güncellendi!");
+            toast.success("Kullanıcı başarıyla güncellendi!");
             onUserUpdated();
             handleClose();
         } catch (err) {
             console.error("Kullanıcı güncellenirken hata:", err);
-
-            setError(err.response?.data?.title || err.response?.data || "Bir hata oluştu.");
+            const errorMessage = err.response?.data?.title || err.response?.data || "Bir hata oluştu.";
+            toast.error(errorMessage); // alert yerine toast
+            setError(errorMessage);
         }
     };
 
@@ -76,10 +75,11 @@ export function EditUserModal({ open, handleOpen, userToEdit, onUserUpdated }) {
                     onChange={handleChange}
                 />
                 <Input
-                    label="Kullanıcı Adı *"
+                    label="Kullanıcı Adı (Değiştirilemez)"
                     name="userName"
                     value={formData.userName}
-                    onChange={handleChange}
+                    // DEĞİŞİKLİK: Kullanıcı adının değiştirilmesini engellemek için 'disabled' eklendi.
+                    disabled
                 />
                 <hr />
                 <Typography variant="small" color="blue-gray" className="-mb-3">
@@ -91,7 +91,7 @@ export function EditUserModal({ open, handleOpen, userToEdit, onUserUpdated }) {
                     type="password"
                     value={formData.password}
                     onChange={handleChange}
-                    autoComplete="new-password"
+                    // DEĞİŞİKLİK: Tarayıcının otomatik tamamlama yapmasını engellemek için 'autoComplete' kaldırıldı.
                 />
                 <Input
                     label="Yeni Şifre Tekrar"
@@ -99,7 +99,7 @@ export function EditUserModal({ open, handleOpen, userToEdit, onUserUpdated }) {
                     type="password"
                     value={formData.confirmPassword}
                     onChange={handleChange}
-                    autoComplete="new-password"
+                    // DEĞİŞİKLİK: Tarayıcının otomatik tamamlama yapmasını engellemek için 'autoComplete' kaldırıldı.
                 />
             </DialogBody>
             <DialogFooter>
