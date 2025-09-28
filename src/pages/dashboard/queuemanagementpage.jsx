@@ -52,7 +52,7 @@ export function QueueManagementPage() {
         }
     }, [selectedRoute]); // selectedRoute her değiştiğinde bu blok çalışır
 
-    // --- FONKSİYONLAR ---
+
 
     const handleAddVehicleToQueue = async () => {
         if (!vehicleToAdd || !selectedRoute) {
