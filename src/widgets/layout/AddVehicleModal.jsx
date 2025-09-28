@@ -82,7 +82,7 @@ export function AddVehicleModal({ open, handleOpen, onVehicleAdded }) {
         const cleanedPlate = formData.licensePlate.trim().replace(/\s/g, ''); 
         
         if (!TURKISH_PLATE_REGEX.test(formData.licensePlate.trim())) {
-            const msg = "Hata: Plaka formatı uygun değil. Örnek: 34ABC123 veya 06A1234.";
+            const msg = "Plaka formatı uygun değil.";
             setError(msg);
             toast.error(msg);
             return;
