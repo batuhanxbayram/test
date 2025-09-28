@@ -54,7 +54,8 @@ export function Home() {
             <div className="flex flex-col md:flex-row gap-6 pb-4 md:overflow-x-auto md:overflow-y-hidden">
                 {routesWithQueues.map(route => (
                     <div key={route.routeId} className="w-full md:w-80 flex-shrink-0">
-                        <Card className="flex flex-col shadow-lg border border-gray-200 bg-white min-h-[75vh]">
+                        {/* DEĞİŞİKLİK BURADA: min-h-[75vh] değerini min-h-[85vh] olarak artırdık */}
+                        <Card className="flex flex-col shadow-lg border border-gray-200 bg-white min-h-[85vh]">
                             <CardHeader
                                 variant="gradient"
                                 color="gray"
