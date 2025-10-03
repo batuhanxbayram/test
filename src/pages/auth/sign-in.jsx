@@ -6,7 +6,6 @@ import {
   useMaterialTailwindController,
   setUserRole,
 } from "@/context";
-// 1. Kendi oluşturduğunuz apiClient'ı import edin
 import apiClient from "../../api/axiosConfig.js"
 
 export function SignIn() {
@@ -22,20 +21,12 @@ export function SignIn() {
     };
 
     try {
-
       const response = await apiClient.post("/Auth/Login", loginData);
-
-
       const token = response.data;
       console.log(token);
 
       if (token) {
-        // 3. Token'ı localStorage'a kaydet. Bu, interceptor'ın çalışması için kritik.
         localStorage.setItem("authToken", token);
-
-
-        // İYİ BİR PRATİK: Token'ı aldıktan sonra, interceptor'ın bir sonraki
-        // sayfa yenilemesini beklemeden çalışması için anında ayarlayın.
         apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
         console.log("Giriş Başarılı!");
@@ -54,18 +45,13 @@ export function SignIn() {
         alert("Giriş başarılı ancak sunucudan geçerli bir token alınamadı.");
       }
     } catch (error) {
-      // 4. Geliştirilmiş hata yönetimi.
-      // axios, 4xx veya 5xx gibi başarısız statü kodlarında otomatik olarak hata fırlatır ve bu blok çalışır.
       console.error("Giriş sırasında hata:", error);
 
       if (error.response) {
-        // Sunucu bir hata koduyla (401, 404, 500 vb.) yanıt verdi.
         alert("Kullanıcı adı veya şifre hatalı!");
       } else if (error.request) {
-        // İstek yapıldı ancak sunucudan yanıt alınamadı (network hatası).
         alert("Sunucuya bağlanılamadı. Ağ bağlantınızı kontrol edin.");
       } else {
-        // İsteği hazırlarken bir hata oluştu.
         alert("Beklenmedik bir hata oluştu.");
       }
     }
@@ -78,9 +64,7 @@ export function SignIn() {
       >
         <Card className="w-full max-w-md p-8 bg-white/90 backdrop-blur-sm shadow-2xl rounded-2xl">
           <div className="text-center">
-            <Typography variant="h2" className="font-bold mb-6 text-gray-800">
-              LOGO
-            </Typography>
+            <img src="/img/klogo.png" alt="Logo" className="mx-auto h-32 w-auto mb-4" /> {/* Boyut ve boşluk ayarlandı */}
           </div>
           <div className="flex flex-col gap-6">
             <div>
