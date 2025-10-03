@@ -1,24 +1,52 @@
 import React, { useState, useEffect } from "react";
-import { Typography, Card, Spinner, Button, CardHeader, CardBody } from "@material-tailwind/react";
-import { ForwardIcon, InformationCircleIcon } from "@heroicons/react/24/solid";
+import {
+    Typography,
+    Card,
+    Spinner,
+    Button,
+    CardHeader,
+    CardBody
+} from "@material-tailwind/react";
+import { InformationCircleIcon, PaperAirplaneIcon } from "@heroicons/react/24/solid";
 import apiClient from "../../api/axiosConfig.js";
-import { useMaterialTailwindController } from "@/context";
-import { VehicleQueueCard } from "@/widgets/layout/VehicleQueueCard";
+import { toast } from 'react-toastify';
 
-export function Home() {
-    const [controller] = useMaterialTailwindController();
-    const { userRole } = controller;
+// Her bir araç için oluşturulacak kart bileşeni
+function DispatchVehicleCard({ vehicle, index, onSendToEnd }) {
+    const isFirstThree = index < 3;
+    const cardBgColor = isFirstThree ? "bg-green-100" : "bg-blue-gray-50/70";
+    const textColor = isFirstThree ? "text-green-900" : "text-blue-gray-700";
+    const borderColor = isFirstThree ? "border-green-300" : "border-transparent";
 
+    return (
+        <div className={`p-1.5 rounded-md ${cardBgColor} shadow-sm flex items-center justify-between border ${borderColor}`}>
+            <div className="flex items-center gap-2">
+                <Typography className={`font-bold text-md ${textColor}`}>#{index + 1}</Typography>
+                <Typography variant="small" className="font-bold text-blue-gray-800 leading-tight">
+                    {vehicle.licensePlate}
+                </Typography>
+            </div>
+            <Button size="sm" variant="gradient" color="blue-gray" onClick={onSendToEnd} className="flex-shrink-0 flex items-center gap-2">
+                <PaperAirplaneIcon className="h-4 w-4" />
+                Gönder
+            </Button>
+        </div>
+    );
+}
+
+// Yeni Sayfa Bileşeni
+export function DispatchPage() {
     const [routesWithQueues, setRoutesWithQueues] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
+    // TÜM FONKSİYONLAR BİLEŞENİN İÇİNDE
     const fetchAllQueues = async () => {
         try {
             const response = await apiClient.get("/queues/all");
             setRoutesWithQueues(response.data);
         } catch (err) {
-            setError("Sıra verileri yüklenirken bir hata oluştu. Lütfen sayfayı yenileyin.");
+            setError("Sıra verileri yüklenirken bir hata oluştu.");
             console.error(err);
         } finally {
             if (loading) setLoading(false);
@@ -27,17 +55,18 @@ export function Home() {
 
     useEffect(() => {
         fetchAllQueues();
-        const interval = setInterval(fetchAllQueues, 15000);
-        return () => clearInterval(interval);
     }, []);
 
-    const handleNextVehicle = async (routeId) => {
-        try {
-            await apiClient.post(`/admin/vehicles/${routeId}/move-first-to-end`);
-            await fetchAllQueues();
-        } catch (error) {
-            console.error("Sıra ilerletilirken hata:", error);
-            alert(error.response?.data?.message || "İşlem başarısız oldu.");
+    const handleSendToEnd = async (routeId, vehicleId, licensePlate) => {
+        if (window.confirm(`'${licensePlate}' plakalı aracı sıranın sonuna göndermek istediğinizden emin misiniz?`)) {
+            try {
+                await apiClient.post(`/routes/${routeId}/queue/move-to-end`, { vehicleId });
+                toast.info(`'${licensePlate}' plakalı araç sıranın sonuna gönderildi.`);
+                fetchAllQueues();
+            } catch (error) {
+                console.error("Araç sona gönderilirken hata:", error);
+                toast.error("İşlem sırasında bir hata oluştu.");
+            }
         }
     };
 
@@ -51,11 +80,9 @@ export function Home() {
 
     return (
         <div className="mt-6 md:mt-12">
-            {/* 1. DEĞİŞİKLİK: Ana sarmalayıcıya ekran yüksekliğine bağlı bir yükseklik veriyoruz. */}
             <div className="flex flex-col md:flex-row gap-6 pb-4 md:h-[calc(100vh-80px)] md:overflow-x-auto md:overflow-y-hidden">
                 {routesWithQueues.map(route => (
                     <div key={route.routeId} className="w-full md:w-80 flex-shrink-0">
-                        {/* 2. DEĞİŞİKLİK: Kartın, ebeveyninin %100 yüksekliğini almasını sağlıyoruz ve min-h'yi kaldırıyoruz. */}
                         <Card className="flex flex-col h-full shadow-lg border border-gray-200 bg-white">
                             <CardHeader
                                 variant="gradient"
@@ -70,25 +97,17 @@ export function Home() {
                                         {route.queuedVehicles.length} Araç
                                     </Typography>
                                 </div>
-                                {userRole === 'admin' && (
-                                    <div className="ml-4 flex-shrink-0">
-                                        <Button
-                                            size="sm"
-                                            className="flex items-center gap-2"
-                                            onClick={() => handleNextVehicle(route.routeId)}
-                                            disabled={route.queuedVehicles.length < 2}
-                                        >
-                                            <ForwardIcon className="h-4 w-4" />
-                                            İlerle
-                                        </Button>
-                                    </div>
-                                )}
                             </CardHeader>
                             <CardBody className="p-4 pt-0 flex-grow overflow-y-auto">
                                 {route.queuedVehicles.length > 0 ? (
                                     <div className="flex flex-col gap-2">
                                         {route.queuedVehicles.map((vehicle, index) => (
-                                            <VehicleQueueCard key={vehicle.id} vehicle={vehicle} index={index} />
+                                            <DispatchVehicleCard
+                                                key={vehicle.id}
+                                                vehicle={vehicle}
+                                                index={index}
+                                                onSendToEnd={() => handleSendToEnd(route.routeId, vehicle.id, vehicle.licensePlate)}
+                                            />
                                         ))}
                                     </div>
                                 ) : (
@@ -108,4 +127,4 @@ export function Home() {
     );
 }
 
-export default Home;
+export default DispatchPage;

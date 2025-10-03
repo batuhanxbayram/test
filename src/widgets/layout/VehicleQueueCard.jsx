@@ -8,19 +8,18 @@ export function VehicleQueueCard({ vehicle, index }) {
     const borderColor = isFirstThree ? "border-green-300" : "border-transparent";
 
     return (
-        <div className={`p-2.5 rounded-lg ${cardBgColor} border ${borderColor} shadow-sm`}>
-            <div className="flex items-center gap-3">
-                <Typography className={`font-bold text-lg ${textColor}`}>
+        // DEĞİŞİKLİK: Dikey boşluğu azaltmak için padding (p-1.5) küçültüldü.
+        <div className={`p-1.5 rounded-md ${cardBgColor} border ${borderColor} shadow-sm`}>
+            {/* DEĞİŞİKLİK: Elemanlar arası boşluk (gap-2) azaltıldı. */}
+            <div className="flex items-center gap-2">
+                {/* DEĞİŞİKLİK: Sıra numarasının fontu (text-md) küçültüldü. */}
+                <Typography className={`font-bold text-md ${textColor}`}>
                     #{index + 1}
                 </Typography>
-                <div>
-                    <Typography variant="small" className="font-bold text-blue-gray-800">
-                        {vehicle.licensePlate}
-                    </Typography>
-                    <Typography variant="small" className="text-blue-gray-500">
-                        {vehicle.userFullName}
-                    </Typography>
-                </div>
+                <Typography variant="small" className="font-bold text-blue-gray-800 leading-tight">
+                    {vehicle.licensePlate}
+                </Typography>
+
             </div>
         </div>
     );
