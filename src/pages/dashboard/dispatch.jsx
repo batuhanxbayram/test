@@ -114,7 +114,7 @@ export function DispatchPage() {
                                     <div className="flex flex-col items-center justify-center h-full text-center text-blue-gray-400">
                                         <InformationCircleIcon className="w-12 h-12 mb-2" />
                                         <Typography variant="small" className="font-semibold">
-                                            Sırada Araç Yok
+                                            Sırada Araç Yok !
                                         </Typography>
                                     </div>
                                 )}
