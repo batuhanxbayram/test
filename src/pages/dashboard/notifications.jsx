@@ -115,27 +115,32 @@ export function Notifications() {
     }
   };
 
-
-  return (
+return (
     <>
       {/* Toast Container'ı ekledik */}
       <ToastContainer />
       
-      {/* Modal bileşenleri (Değişmedi, sadece handleDataChange çağrısı değişti) */}
+      {/* Modal bileşenleri */}
       <AddRouteModal
           open={addModalOpen}
           handleOpen={handleOpenAddModal}
-          onRouteAdded={fetchRoutes} // Modal kendi toast'ını gösterecek, buraya sadece fetch çağırabiliriz
+          onRouteAdded={fetchRoutes} 
       />
       <EditRouteModal
           open={editModalOpen}
           handleOpen={handleCloseEditModal}
           routeToEdit={currentRoute}
-          onRouteUpdated={fetchRoutes} // Modal kendi toast'ını gösterecek
+          onRouteUpdated={fetchRoutes} 
       />
 
-      <div className="mx-auto my-20 flex max-w-screen-lg flex-col gap-8">
-        <Card>
+      {/* ANA KAPSAYICI DIV
+        - mx-auto ve max-w-screen-lg kaldırıldı.
+        - h-full (dikey) ve flex (varsayılan genişlik) ile alanı dolduracak.
+      */}
+      <div className="mt-12 mb-8 flex flex-col gap-8 h-full">
+        
+        {/* Kartın da "h-full" olması gerekiyor */}
+        <Card className="h-full">
           <CardHeader
             variant="gradient"
             color="gray"
@@ -174,7 +179,6 @@ export function Notifications() {
                     </Typography>
                   </td>
                   <td className="py-3 px-5 border-b border-blue-gray-50 text-right space-x-1">
-                    {/* Düzenle butonunun onClick olayını bağladık */}
                     <Button
                       size="sm"
                       variant="text"
@@ -187,7 +191,6 @@ export function Notifications() {
                       size="sm"
                       variant="text"
                       color="red"
-                      // Yeni Toast Onay mekanizmasını bağladık
                       onClick={() => handleDeleteToast(route.id, route.routeName)}
                     >
                       Sil
