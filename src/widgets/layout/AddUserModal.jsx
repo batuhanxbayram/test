@@ -9,7 +9,7 @@ import {
     Typography,
 } from "@material-tailwind/react";
 // TOAST ENTEGRASYONU
-import { toast } from 'react-toastify'; 
+import { toast } from 'react-toastify';
 import apiClient from "../../api/axiosConfig.js";
 
 export function AddUserModal({ open, handleOpen, onUserAdded }) {
@@ -53,11 +53,11 @@ export function AddUserModal({ open, handleOpen, onUserAdded }) {
                 userName: formData.userName,
                 password: formData.password,
                 // HATA ÇÖZÜMÜ: API'ın beklediği ConfirmPassword alanını ekliyoruz
-                confirmPassword: formData.confirmPassword 
+                confirmPassword: formData.confirmPassword
             };
 
             await apiClient.post("/Users", payload);
-            
+
             // Başarı TOAST'ı göster
             toast.success(`'${formData.fullName}' adlı kullanıcı başarıyla eklendi!`, { position: "top-right" });
 
@@ -65,7 +65,7 @@ export function AddUserModal({ open, handleOpen, onUserAdded }) {
             handleClose();
         } catch (err) {
             console.error("Kullanıcı eklenirken hata:", err.response || err);
-            
+
             // Backend'den gelen spesifik hata mesajını çek ve TOAST ile göster
             const apiError = err.response?.data?.message || err.response?.data?.error || "Kullanıcı eklenirken beklenmedik bir hata oluştu.";
             setError(apiError);
@@ -77,7 +77,7 @@ export function AddUserModal({ open, handleOpen, onUserAdded }) {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
         // Kullanıcı yazmaya başlayınca local hatayı temizle
-        setError(""); 
+        setError("");
     };
 
     return (
@@ -85,37 +85,41 @@ export function AddUserModal({ open, handleOpen, onUserAdded }) {
             <DialogHeader>Yeni Kullanıcı Ekle</DialogHeader>
             <DialogBody divider className="flex flex-col gap-4">
                 {error && <Typography color="red" variant="small">{error}</Typography>}
-                
-                <Input 
-                    label="Tam Ad *" 
-                    name="fullName" 
-                    value={formData.fullName} 
-                    onChange={handleChange} 
+
+                <Input
+                    label="Tam Ad *"
+                    name="fullName"
+                    value={formData.fullName}
+                    onChange={handleChange}
+                    autoComplete="off" /* Otomatik doldurma kapalı */
                 />
-                
-                <Input 
-                    label="Kullanıcı Adı *" 
-                    name="userName" 
-                    value={formData.userName} 
-                    onChange={handleChange} 
+
+                <Input
+                    label="Kullanıcı Adı *"
+                    name="userName"
+                    value={formData.userName}
+                    onChange={handleChange}
+                    autoComplete="off" /* Otomatik doldurma kapalı */
                 />
-                
-                <Input 
-                    label="Şifre *" 
-                    name="password" 
-                    type="password" 
-                    value={formData.password} 
-                    onChange={handleChange} 
+
+                <Input
+                    label="Şifre *"
+                    name="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    autoComplete="off" /* Otomatik doldurma kapalı */
                 />
-                
-                <Input 
-                    label="Şifre Tekrar *" 
-                    name="confirmPassword" 
-                    type="password" 
-                    value={formData.confirmPassword} 
-                    onChange={handleChange} 
+
+                <Input
+                    label="Şifre Tekrar *"
+                    name="confirmPassword"
+                    type="password"
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    autoComplete="off" /* Otomatik doldurma kapalı */
                 />
-                
+
             </DialogBody>
             <DialogFooter>
                 <Button variant="text" color="red" onClick={handleClose} className="mr-1">

@@ -7,7 +7,7 @@ import apiClient from "../../api/axiosConfig.js";
 export function EditVehicleModal({ open, handleOpen, onVehicleUpdated, vehicleToEdit }) {
     const [formData, setFormData] = useState({
         licensePlate: "",
-        driverName: "",
+        driverName: "", // --- DEĞİŞİKLİK --- Bu state kalıyor, sadece disabled input'u doldurmak için.
         phoneNumber: "",
         isActive: true,
     });
@@ -18,12 +18,11 @@ export function EditVehicleModal({ open, handleOpen, onVehicleUpdated, vehicleTo
         if (vehicleToEdit) {
             setFormData({
                 licensePlate: vehicleToEdit.licensePlate || "",
-                driverName: vehicleToEdit.driverName || "",
+                driverName: vehicleToEdit.driverName || "", // 'driverName'i state'e atıyoruz (API'den geliyor)
                 phoneNumber: vehicleToEdit.phoneNumber || "",
                 isActive: vehicleToEdit.isActive,
             });
         } else {
-
             setFormData({ licensePlate: "", driverName: "", phoneNumber: "", isActive: true });
             setError("");
         }
@@ -45,9 +44,18 @@ export function EditVehicleModal({ open, handleOpen, onVehicleUpdated, vehicleTo
         if (!vehicleToEdit) return;
 
         try {
-            // Backend'deki PUT endpoint'ine istek gönderiyoruz.
-            await apiClient.put(`/admin/vehicles/${vehicleToEdit.id}`, formData);
-            alert("Araç başarıyla güncellendi!");
+            // --- DEĞİŞİKLİK ---
+            // API'ye gönderilecek payload'u manuel oluşturuyoruz.
+            // 'driverName' bu payload'a dahil edilmiyor.
+            const payload = {
+                licensePlate: formData.licensePlate,
+                phoneNumber: formData.phoneNumber,
+                isActive: formData.isActive
+            };
+
+            await apiClient.put(`/admin/vehicles/${vehicleToEdit.id}`, payload);
+
+            alert("Araç başarıyla güncellendi!"); // Bunu da toast'a çevirebilirsiniz
             onVehicleUpdated();
             handleOpen();
         } catch (err) {
@@ -62,7 +70,11 @@ export function EditVehicleModal({ open, handleOpen, onVehicleUpdated, vehicleTo
             <DialogBody divider className="flex flex-col gap-4">
                 {error && <Typography color="red" variant="small">{error}</Typography>}
                 <Input label="Plaka *" name="licensePlate" value={formData.licensePlate} onChange={handleChange} />
-                <Input label="Şoför Adı" name="driverName" value={formData.driverName} onChange={handleChange} />
+
+                {/* --- DEĞİŞİKLİK --- */}
+                {/* Şoför Adı alanı artık 'disabled' (değiştirilemez) */}
+                <Input label="Şoför Adı" name="driverName" value={formData.driverName} disabled />
+
                 <Input label="Telefon Numarası" name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} />
                 <Checkbox label="Aktif" name="isActive" checked={formData.isActive} onChange={handleChange} />
             </DialogBody>

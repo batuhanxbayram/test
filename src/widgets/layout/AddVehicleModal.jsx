@@ -11,30 +11,33 @@ import {
     Typography,
 } from "@material-tailwind/react";
 // TOAST ENTEGRASYONU
-import { toast } from 'react-toastify'; 
+import { toast } from 'react-toastify';
 import apiClient from "../../api/axiosConfig.js";
 
-// TÜRKİYE PLAKA FORMATI REGEX KURALI: 2 Rakam + Boşluk(Ops.) + 1-3 Büyük Harf + Boşluk(Ops.) + 1-4 Rakam
+// TÜRKİYE PLAKA FORMATI REGEX KURALI
 const TURKISH_PLATE_REGEX = /^(\d{2})\s*([A-Z]{1,3})\s*(\d{1,4})$/;
-
 
 export function AddVehicleModal({ open, handleOpen, onVehicleAdded }) {
     const [users, setUsers] = useState([]);
+
+    // --- DEĞİŞİKLİK 1 ---
+    // 'appUserId' state'ini 'formData'dan ayırıyoruz.
+    // 'driverName' state'den tamamen kaldırıldı.
+    const [selectedUserId, setSelectedUserId] = useState(""); // Seçilen kullanıcı ID'si için ayrı state
     const [formData, setFormData] = useState({
         licensePlate: "",
-        driverName: "",
         phoneNumber: "",
-        appUserId: "",
     });
+
     const [error, setError] = useState("");
 
     useEffect(() => {
         if (open) {
-            // ... (Kullanıcıları çekme kodu)
+            // Modal açıldığında kullanıcıları çek
             apiClient.get("/Users/without-vehicle")
                 .then(response => {
                     setUsers(response.data);
-                    setError(""); 
+                    setError("");
                 })
                 .catch(err => {
                     console.error("Kullanıcılar çekilirken hata oluştu:", err);
@@ -42,68 +45,72 @@ export function AddVehicleModal({ open, handleOpen, onVehicleAdded }) {
                     setError(msg);
                     toast.error(msg);
                 });
+        } else {
+            // Modal kapandığında formu temizle
+            clearForm();
         }
     }, [open]);
 
+    // Input (Plaka, Telefon) değişiklikleri için
     const handleChange = (e) => {
         const { name, value } = e.target;
-        
-        // Plaka girişini her zaman büyük harfe dönüştür
         const newValue = name === 'licensePlate' ? value.toUpperCase() : value;
-
         setFormData(prev => ({ ...prev, [name]: newValue }));
     };
 
+    // --- DEĞİŞİKLİK 2 ---
+    // Select (Kullanıcı) değişikliği için
+    // Bu fonksiyon artık doğrudan 'selectedUserId' state'ini güncelliyor.
     const handleSelectChange = (value) => {
-        setFormData(prev => ({ ...prev, appUserId: value }));
+        setSelectedUserId(value);
     };
 
     const clearForm = () => {
-        setFormData({ licensePlate: "", driverName: "", phoneNumber: "", appUserId: "" });
+        // --- DEĞİŞİKLİK 3 ---
+        // Formu temizlerken her iki state'i de sıfırlıyoruz.
+        setFormData({ licensePlate: "", phoneNumber: "" });
+        setSelectedUserId("");
         setError("");
     };
 
     const handleClose = () => {
-        clearForm();
+        // clearForm(); // useEffect [open] içinde zaten çağrılıyor
         handleOpen();
     }
 
     const handleSubmit = async () => {
-        // Zorunlu alan kontrolü
-        if (!formData.licensePlate || !formData.appUserId) {
+        // --- DEĞİŞİKLİK 4 ---
+        // Zorunlu alan kontrolü 'selectedUserId' üzerinden yapılıyor
+        if (!formData.licensePlate || !selectedUserId) {
             const msg = "Plaka ve Kullanıcı alanları zorunludur.";
             setError(msg);
-            toast.error(msg); 
+            toast.error(msg);
             return;
         }
 
-        // 🎯 YENİ PLAKA FORMATI KONTROLÜ
-        // Plakayı boşlukları temizleyerek kontrol et
-        const cleanedPlate = formData.licensePlate.trim().replace(/\s/g, ''); 
-        
         if (!TURKISH_PLATE_REGEX.test(formData.licensePlate.trim())) {
             const msg = "Plaka formatı uygun değil.";
             setError(msg);
             toast.error(msg);
             return;
         }
-        
+
         try {
-            // API'a göndermeden önce plakadaki gereksiz boşlukları temizleyebiliriz.
-            const payload = { 
-                ...formData,
-                licensePlate: formData.licensePlate.trim().replace(/\s+/g, '') // Birden fazla boşluğu tek boşluğa veya hiç boşluğa dönüştürme
+            // --- DEĞİŞİKLİK 5 ---
+            // Payload'u gönderirken 'formData' ve 'selectedUserId' state'lerini birleştiriyoruz.
+            const payload = {
+                licensePlate: formData.licensePlate.trim().replace(/\s+/g, ''),
+                phoneNumber: formData.phoneNumber,
+                appUserId: selectedUserId // Ayrı state'den gelen ID
             };
-            
+
             await apiClient.post("/admin/vehicles", payload);
-            
             toast.success(`'${formData.licensePlate}' plakalı araç başarıyla eklendi!`, { position: "top-right" });
 
             onVehicleAdded();
             handleClose();
         } catch (err) {
             console.error("Araç eklenirken hata:", err.response || err);
-            
             const apiError = err.response?.data?.message || err.response?.data?.error || "Araç eklenirken beklenmedik bir hata oluştu.";
             setError(apiError);
             toast.error(apiError);
@@ -115,22 +122,35 @@ export function AddVehicleModal({ open, handleOpen, onVehicleAdded }) {
             <DialogHeader>Yeni Araç Ekle</DialogHeader>
             <DialogBody divider className="flex flex-col gap-4">
                 {error && <Typography color="red" variant="small">{error}</Typography>}
-                
-                {/* Plaka girişi: Artık her harf büyük yazılıyor */}
-                <Input 
-                    label="Plaka *" 
-                    name="licensePlate" 
-                    value={formData.licensePlate} 
-                    onChange={handleChange} 
+
+                <Input
+                    label="Plaka *"
+                    name="licensePlate"
+                    value={formData.licensePlate}
+                    onChange={handleChange}
                 />
-                
-                <Select label="Kullanıcı Seçiniz *" name="appUserId" onChange={handleSelectChange} value={formData.appUserId}>
+
+                {/* --- DEĞİŞİKLİK 6 --- */}
+                {/* Select'in 'value' prop'u artık 'selectedUserId' state'ine bağlı */}
+                <Select
+                    label="Kullanıcı Seçiniz *"
+                    name="appUserId"
+                    onChange={handleSelectChange}
+                    value={selectedUserId}
+                >
                     {users.length > 0 ? (
                         users.map(user => <Option key={user.id} value={user.id}>{user.fullName}</Option>)
                     ) : ( <Option disabled>Atanabilir kullanıcı bulunamadı</Option> )}
                 </Select>
-                <Input label="Şoför Adı (Opsiyonel)" name="driverName" value={formData.driverName} onChange={handleChange} />
-                <Input label="Telefon Numarası (Opsiyonel)" name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} />
+
+                {/* Şoför Adı input'u tamamen kaldırılmıştı */}
+
+                <Input
+                    label="Telefon Numarası (Opsiyonel)"
+                    name="phoneNumber"
+                    value={formData.phoneNumber}
+                    onChange={handleChange}
+                />
             </DialogBody>
             <DialogFooter>
                 <Button variant="text" color="red" onClick={handleClose} className="mr-1"><span>İptal</span></Button>
