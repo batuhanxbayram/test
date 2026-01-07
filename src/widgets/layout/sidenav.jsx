@@ -1,14 +1,11 @@
+import React from "react";
 import PropTypes from "prop-types";
 import { NavLink } from "react-router-dom";
 import { XMarkIcon } from "@heroicons/react/24/outline";
-import {
-  Button,
-  IconButton,
-  Typography,
-} from "@material-tailwind/react";
+import { Button, IconButton, Typography } from "@material-tailwind/react";
 import { useMaterialTailwindController, setOpenSidenav } from "@/context";
 
-export function Sidenav({ brandImg, brandName, routes }) {
+export function Sidenav({ brandName, routes }) {
   const [controller, dispatch] = useMaterialTailwindController();
   const { sidenavColor, sidenavType, openSidenav, userRole } = controller;
 
@@ -19,84 +16,80 @@ export function Sidenav({ brandImg, brandName, routes }) {
   };
 
   return (
-    <aside
-      className={`${sidenavTypes[sidenavType]} ${
-        openSidenav ? "translate-x-0" : "-translate-x-80"
-      } fixed inset-0 z-50 my-4 ml-4 h-[calc(100vh-32px)] w-72 rounded-xl transition-transform duration-300 xl:translate-x-0 border border-blue-gray-100 focus:outline-none`}
-    >
-      <div className="relative">
-        {/* 🔹 Logo ve Marka Adı */}
-        <div 
-        className="flex flex-col items-center py-6 px-8 text-center select-none" 
-        contentEditable="false"
+    <>
+      {/* Arka Plan Karartma (Overlay) */}
+      <div
+        className={`fixed inset-0 z-[999] bg-black/50 transition-opacity duration-300 xl:hidden ${
+          openSidenav ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        }`}
+        onClick={() => setOpenSidenav(dispatch, false)}
+      />
+
+      <aside
+        className={`${sidenavTypes[sidenavType]} ${
+          openSidenav ? "translate-x-0" : "-translate-x-80"
+        } fixed inset-0 z-[1000] my-4 ml-4 h-[calc(100vh-32px)] w-72 rounded-xl transition-transform duration-300 xl:translate-x-0 border border-blue-gray-100 focus:outline-none`}
       >
-        <img 
-          src="/img/klogo.png" 
-          alt="Logo" 
-          className="w-28 h-28 mb-0 object-contain" 
-        />
-        <Typography
-          variant="h6"
-          color={sidenavType === "dark" ? "white" : "blue-gray"}
-        >
-          {brandName}
-        </Typography>
-      </div>
+        <div className="relative">
+          {/* Logo Kısmı - Yazı kaldırıldı ve boşluk düzenlendi */}
+          <div className="flex flex-col items-center py-8 px-8 text-center select-none">
+            <img 
+              src="/img/klogo.png" 
+              alt="Logo" 
+              className="w-32 h-32 mb-0 object-contain" 
+            />
+            {/* Typography (brandName) kısmı buradan silindi 💅 */}
+          </div>
+        </div>
 
-        {/* 🔹 Sidenav kapatma butonu */}
-        <IconButton
-          variant="text"
-          color="white"
-          size="sm"
-          ripple={false}
-          className="absolute right-0 top-0 grid rounded-br-none rounded-tl-none xl:hidden"
-          onClick={() => setOpenSidenav(dispatch, false)}
-        >
-          <XMarkIcon strokeWidth={2.5} className="h-5 w-5 text-white" />
-        </IconButton>
-      </div>
-
-      {/* 🔹 Menü */}
-      <div className="m-4">
-        {routes
-          .filter((route) => route.layout === "dashboard")
-          .map(({ layout, pages }, key) => (
-            <ul key={key} className="mb-4 flex flex-col gap-1">
-              {pages
-                .filter((page) => !page.roles || page.roles.includes(userRole))
-                .map(({ icon, name, path }) => (
-                  <li key={name}>
-                    <NavLink to={`/${layout}${path}`}>
-                      {({ isActive }) => (
-                        <Button
-                          variant={isActive ? "gradient" : "text"}
-                          color={
-                            isActive
-                              ? sidenavColor
-                              : sidenavType === "dark"
-                              ? "white"
-                              : "blue-gray"
+        <div className="m-4">
+          {routes && routes
+            .filter((route) => route.layout === "dashboard")
+            .map(({ layout, pages }, key) => (
+              <ul key={key} className="mb-4 flex flex-col gap-1">
+                {pages && pages
+                  .filter((page) => !page.roles || page.roles.includes(userRole))
+                  .map(({ icon, name, path }) => (
+                    <li key={name}>
+                      <NavLink 
+                        to={`/${layout}${path}`}
+                        onClick={() => {
+                          if (window.innerWidth < 1200) {
+                            setOpenSidenav(dispatch, false);
                           }
-                          className="flex items-center gap-4 px-4 capitalize"
-                          fullWidth
-                        >
-                          {icon}
-                          <Typography
-                            color="inherit"
-                            className="font-medium capitalize"
+                        }}
+                      >
+                        {({ isActive }) => (
+                          <Button
+                            variant={isActive ? "gradient" : "text"}
+                            color={isActive ? sidenavColor : (sidenavType === "dark" ? "white" : "blue-gray")}
+                            className="flex items-center gap-4 px-4 capitalize"
+                            fullWidth
                           >
-                            {name}
-                          </Typography>
-                        </Button>
-                      )}
-                    </NavLink>
-                  </li>
-                ))}
-            </ul>
-          ))}
-      </div>
-    </aside>
+                            {icon}
+                            <Typography color="inherit" className="font-medium capitalize">
+                              {name}
+                            </Typography>
+                          </Button>
+                        )}
+                      </NavLink>
+                    </li>
+                  ))}
+              </ul>
+            ))}
+        </div>
+      </aside>
+    </>
   );
 }
+
+Sidenav.defaultProps = {
+  brandName: "S.S. 75 NO'LU KOOP",
+};
+
+Sidenav.propTypes = {
+  brandName: PropTypes.string,
+  routes: PropTypes.array.isRequired,
+};
 
 export default Sidenav;
