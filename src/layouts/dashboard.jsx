@@ -26,7 +26,7 @@ export function Dashboard() {
       />
       <div className="p-4 xl:ml-80">
         <DashboardNavbar />
-        
+        
         {/* Configurator bileşeni ve onu açan IconButton tamamen kaldırıldı */}
         
         <Routes>
@@ -48,4 +48,4 @@ export function Dashboard() {
 
 Dashboard.displayName = "/src/layout/dashboard.jsx";
 
-export default Dashboard;
+export default Dashboard;  
