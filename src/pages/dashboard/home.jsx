@@ -18,7 +18,7 @@ export function Home() {
             const response = await apiClient.get("/queues/all");
             setRoutesWithQueues(response.data);
         } catch (err) {
-            setError("Sıra verileri yüklenirken bir hata oluştu. Lütfen sayfayı yenileyin.");
+            setError("Sıra verileri yüklenirken bir hata oluştu.");
             console.error(err);
         } finally {
             if (loading) setLoading(false);
@@ -37,64 +37,66 @@ export function Home() {
             await fetchAllQueues();
         } catch (error) {
             console.error("Sıra ilerletilirken hata:", error);
-            alert(error.response?.data?.message || "İşlem başarısız oldu.");
+            alert("İşlem başarısız oldu.");
         }
     };
 
     if (loading) {
-        return <div className="flex justify-center items-center h-screen"><Spinner className="h-16 w-16" /></div>;
+        return <div className="flex justify-center items-center h-screen"><Spinner className="h-12 w-12" /></div>;
     }
 
     if (error) {
-        return <Typography color="red" className="mt-12 text-center">{error}</Typography>;
+        return <Typography color="red" className="mt-12 text-center text-sm">{error}</Typography>;
     }
 
     return (
-        <div className="mt-6 md:mt-12">
-            {/* 1. DEĞİŞİKLİK: Ana sarmalayıcıya ekran yüksekliğine bağlı bir yükseklik veriyoruz. */}
-            <div className="flex flex-col md:flex-row gap-6 pb-4 md:h-[calc(100vh-80px)] md:overflow-x-auto md:overflow-y-hidden">
+        <div className="mt-4 px-2">
+            {/* Sütunlar arası gap-4 yapıldı ve yükseklik ayarlandı */}
+            <div className="flex flex-col md:flex-row gap-4 pb-4 md:h-[calc(100vh-120px)] md:overflow-x-auto md:overflow-y-hidden">
                 {routesWithQueues.map(route => (
-                    <div key={route.routeId} className="w-full md:w-80 flex-shrink-0">
-                        {/* 2. DEĞİŞİKLİK: Kartın, ebeveyninin %100 yüksekliğini almasını sağlıyoruz ve min-h'yi kaldırıyoruz. */}
-                        <Card className="flex flex-col h-full shadow-lg border border-gray-200 bg-white">
+                    // md:w-64 ile sütunları daralttık (yan yana daha çok sütun sığar)
+                    <div key={route.routeId} className="w-full md:w-64 flex-shrink-0">
+                        <Card className="flex flex-col h-full shadow-md border border-blue-gray-100 bg-white">
+                            {/* Siyah başlık bandını m-2 p-2 ile incelttik */}
                             <CardHeader
                                 variant="gradient"
                                 color="gray"
-                                className="m-4 p-4 flex items-center justify-between rounded-lg flex-shrink-0"
+                                className="m-2 p-2 flex items-center justify-between rounded-md flex-shrink-0"
                             >
                                 <div className="flex-1 overflow-hidden">
-                                    <Typography variant="h6" color="white" className="truncate" title={route.routeName}>
+                                    <Typography className="text-xs font-bold text-white truncate" title={route.routeName}>
                                         {route.routeName}
                                     </Typography>
-                                    <Typography variant="small" color="white" className="opacity-80">
+                                    <Typography className="text-[10px] text-white opacity-80 leading-tight">
                                         {route.queuedVehicles.length} Araç
                                     </Typography>
                                 </div>
                                 {userRole === 'admin' && (
-                                    <div className="ml-4 flex-shrink-0">
+                                    <div className="ml-2 flex-shrink-0">
                                         <Button
                                             size="sm"
-                                            className="flex items-center gap-2"
+                                            variant="filled"
+                                            className="flex items-center gap-1 p-1 px-2 bg-blue-gray-700 hover:bg-blue-gray-800"
                                             onClick={() => handleNextVehicle(route.routeId)}
                                             disabled={route.queuedVehicles.length < 2}
                                         >
-                                            <ForwardIcon className="h-4 w-4" />
-                                            İlerle
+                                            <ForwardIcon className="h-3 w-3 text-white" />
+                                            <span className="text-[10px] lowercase first-letter:uppercase">İlerle</span>
                                         </Button>
                                     </div>
                                 )}
                             </CardHeader>
-                            <CardBody className="p-4 pt-0 flex-grow overflow-y-auto">
+
+                            {/* İçerik kısmındaki padding'i azalttık ve gap-1 yaptık */}
+                            <CardBody className="p-2 pt-0 flex-grow overflow-y-auto flex flex-col gap-1">
                                 {route.queuedVehicles.length > 0 ? (
-                                    <div className="flex flex-col gap-2">
-                                        {route.queuedVehicles.map((vehicle, index) => (
-                                            <VehicleQueueCard key={vehicle.id} vehicle={vehicle} index={index} />
-                                        ))}
-                                    </div>
+                                    route.queuedVehicles.map((vehicle, index) => (
+                                        <VehicleQueueCard key={vehicle.id} vehicle={vehicle} index={index} />
+                                    ))
                                 ) : (
-                                    <div className="flex flex-col items-center justify-center h-full text-center text-blue-gray-400">
-                                        <InformationCircleIcon className="w-12 h-12 mb-2" />
-                                        <Typography variant="small" className="font-semibold">
+                                    <div className="flex flex-col items-center justify-center h-full text-center text-blue-gray-300 opacity-60">
+                                        <InformationCircleIcon className="w-8 h-8 mb-1" />
+                                        <Typography className="text-[10px] font-semibold">
                                             Sırada Araç Yok
                                         </Typography>
                                     </div>
