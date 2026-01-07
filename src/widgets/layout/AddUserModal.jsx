@@ -8,7 +8,6 @@ import {
     Input,
     Typography,
 } from "@material-tailwind/react";
-// TOAST ENTEGRASYONU
 import { toast } from 'react-toastify';
 import apiClient from "../../api/axiosConfig.js";
 
@@ -32,7 +31,7 @@ export function AddUserModal({ open, handleOpen, onUserAdded }) {
     };
 
     const handleSubmit = async () => {
-        // Form Kontrolleri (Frontend tarafı)
+        // 1. İstemci Tarafı Validasyonları
         if (!formData.fullName || !formData.userName || !formData.password || !formData.confirmPassword) {
             const msg = "Tüm zorunlu alanları (Ad, Kullanıcı Adı, Şifre) doldurunuz.";
             setError(msg);
@@ -47,18 +46,15 @@ export function AddUserModal({ open, handleOpen, onUserAdded }) {
         }
 
         try {
-            // BACKEND'E GÖNDERİLECEK PAYLOAD
             const payload = {
                 fullName: formData.fullName,
                 userName: formData.userName,
                 password: formData.password,
-                // HATA ÇÖZÜMÜ: API'ın beklediği ConfirmPassword alanını ekliyoruz
                 confirmPassword: formData.confirmPassword
             };
 
             await apiClient.post("/Users", payload);
 
-            // Başarı TOAST'ı göster
             toast.success(`'${formData.fullName}' adlı kullanıcı başarıyla eklendi!`, { position: "top-right" });
 
             onUserAdded();
@@ -66,17 +62,33 @@ export function AddUserModal({ open, handleOpen, onUserAdded }) {
         } catch (err) {
             console.error("Kullanıcı eklenirken hata:", err.response || err);
 
-            // Backend'den gelen spesifik hata mesajını çek ve TOAST ile göster
-            const apiError = err.response?.data?.message || err.response?.data?.error || "Kullanıcı eklenirken beklenmedik bir hata oluştu.";
-            setError(apiError);
-            toast.error(apiError);
+            let errorMessage = "Kullanıcı eklenirken beklenmedik bir hata oluştu.";
+
+            // Backend'den yanıt döndü mü?
+            if (err.response) {
+                // ÖZEL DURUM: 409 Conflict (Çakışma / Kayıtlı Kullanıcı)
+                if (err.response.status === 409) {
+                    // Backend'den özel mesaj geliyorsa onu al, gelmiyorsa standart mesajı göster.
+                    errorMessage = err.response.data?.message || err.response.data?.Message || `'${formData.userName}' kullanıcı adı zaten sistemde kayıtlı. Lütfen farklı bir kullanıcı adı deneyin.`;
+                }
+                // Diğer Hatalar (400 BadRequest vb.)
+                else {
+                    errorMessage = err.response.data?.message || err.response.data?.error || errorMessage;
+                }
+            } else {
+                // Sunucuya hiç ulaşılamadıysa
+                errorMessage = "Sunucu ile bağlantı kurulamadı. Lütfen internetinizi kontrol edin.";
+            }
+
+            setError(errorMessage);
+            toast.error(errorMessage);
         }
     };
 
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
-        // Kullanıcı yazmaya başlayınca local hatayı temizle
+        // Kullanıcı tekrar yazmaya başlayınca hata mesajını temizle
         setError("");
     };
 
@@ -91,7 +103,7 @@ export function AddUserModal({ open, handleOpen, onUserAdded }) {
                     name="fullName"
                     value={formData.fullName}
                     onChange={handleChange}
-                    autoComplete="off" /* Otomatik doldurma kapalı */
+                    autoComplete="off"
                 />
 
                 <Input
@@ -99,7 +111,7 @@ export function AddUserModal({ open, handleOpen, onUserAdded }) {
                     name="userName"
                     value={formData.userName}
                     onChange={handleChange}
-                    autoComplete="off" /* Otomatik doldurma kapalı */
+                    autoComplete="off"
                 />
 
                 <Input
@@ -108,7 +120,7 @@ export function AddUserModal({ open, handleOpen, onUserAdded }) {
                     type="password"
                     value={formData.password}
                     onChange={handleChange}
-                    autoComplete="off" /* Otomatik doldurma kapalı */
+                    autoComplete="new-password"
                 />
 
                 <Input
@@ -117,7 +129,7 @@ export function AddUserModal({ open, handleOpen, onUserAdded }) {
                     type="password"
                     value={formData.confirmPassword}
                     onChange={handleChange}
-                    autoComplete="off" /* Otomatik doldurma kapalı */
+                    autoComplete="new-password"
                 />
 
             </DialogBody>
