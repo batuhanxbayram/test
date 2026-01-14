@@ -40,7 +40,7 @@ export function SignIn() {
           localStorage.setItem("userRole", userRole);
         }
 
-        navigate("/dashboard/home");
+        navigate("/anasayfa/arac-siralari");
       } else {
         alert("Giriş başarılı ancak sunucudan geçerli bir token alınamadı.");
       }
