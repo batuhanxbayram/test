@@ -1,46 +1,28 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { Dashboard, Auth } from "@/layouts";
 import PrivateRoute from "../src/component/PrivateRoute";
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import TVQueuePage from "./pages/dashboard/TVQueuePage";
 
 function App() {
-    return (
-        // DÜZELTME BURADA: Hepsini boş bir tag içine (<> ... </>) aldık.
-        <>
-            <ToastContainer
-                position="top-right"
-                autoClose={3000}
-                hideProgressBar={false}
-                newestOnTop={false}
-                closeOnClick
-                rtl={false}
-                pauseOnFocusLoss
-                draggable
-                pauseOnHover
-                theme="light"
-                style={{ zIndex: 999999 }}
-            />
+  return (
+    <Routes>
+      {/* Dashboard'u sadece giriş yapmış kullanıcı görecek */}
+      <Route
+        path="/anasayfa/*"
+        element={
+          <PrivateRoute>
+            <Dashboard />
+          </PrivateRoute>
+        }
+      />
 
-            <Routes>
-
-                <Route
-                    path="/dashboard/*"
-                    element={
-                        <PrivateRoute>
-                            <Dashboard />
-                        </PrivateRoute>
-                    }
-                />
-
-                {/* Auth sayfaları (giriş, kayıt) herkes görebilir */}
-                <Route path="/auth/*" element={<Auth />} />
-
-                {/* Varsayılan yönlendirme */}
-                <Route path="*" element={<Navigate to="/auth/sign-in" replace />} />
-            </Routes>
-        </>
-    );
+      <Route path="/tv/monitor" element={<TVQueuePage />} />
+      {/* Auth sayfaları (giriş, kayıt) herkes görebilir */}
+      <Route path="/auth/*" element={<Auth />} />
+      {/* Varsayılan yönlendirme */}
+      <Route path="*" element={<Navigate to="/auth/giris" replace />} />
+    </Routes>
+  );
 }
 
 export default App;
