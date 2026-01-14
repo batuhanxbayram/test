@@ -8,7 +8,7 @@ import {
     Input,
     Typography,
 } from "@material-tailwind/react";
-import { toast } from 'react-toastify';
+import { toast } from 'react-toastify'; // Sadece hatalar için kullanacağız
 import apiClient from "../../api/axiosConfig.js";
 
 export function AddUserModal({ open, handleOpen, onUserAdded }) {
@@ -33,9 +33,9 @@ export function AddUserModal({ open, handleOpen, onUserAdded }) {
     const handleSubmit = async () => {
         // 1. İstemci Tarafı Validasyonları
         if (!formData.fullName || !formData.userName || !formData.password || !formData.confirmPassword) {
-            const msg = "Tüm zorunlu alanları (Ad, Kullanıcı Adı, Şifre) doldurunuz.";
+            const msg = "Tüm zorunlu alanları doldurunuz.";
             setError(msg);
-            toast.error(msg);
+            toast.error(msg); // Hata mesajları kalabilir
             return;
         }
         if (formData.password !== formData.confirmPassword) {
@@ -55,29 +55,25 @@ export function AddUserModal({ open, handleOpen, onUserAdded }) {
 
             await apiClient.post("/Users", payload);
 
-            toast.success(`'${formData.fullName}' adlı kullanıcı başarıyla eklendi!`, { position: "top-right" });
+            // --- DÜZELTME BURADA ---
+            // Buradaki toast.success satırını SİLDİK.
+            // Çünkü onUserAdded() fonksiyonu, Profile.jsx içindeki mesajı zaten tetikliyor.
 
-            onUserAdded();
+            onUserAdded(); // Bu satır Profile.jsx'e "İşlem tamam, mesajı göster ve listeyi yenile" der.
             handleClose();
+
         } catch (err) {
             console.error("Kullanıcı eklenirken hata:", err.response || err);
+            let errorMessage = "Kullanıcı eklenirken hata oluştu.";
 
-            let errorMessage = "Kullanıcı eklenirken beklenmedik bir hata oluştu.";
-
-            // Backend'den yanıt döndü mü?
             if (err.response) {
-                // ÖZEL DURUM: 409 Conflict (Çakışma / Kayıtlı Kullanıcı)
                 if (err.response.status === 409) {
-                    // Backend'den özel mesaj geliyorsa onu al, gelmiyorsa standart mesajı göster.
-                    errorMessage = err.response.data?.message || err.response.data?.Message || `'${formData.userName}' kullanıcı adı zaten sistemde kayıtlı. Lütfen farklı bir kullanıcı adı deneyin.`;
-                }
-                // Diğer Hatalar (400 BadRequest vb.)
-                else {
-                    errorMessage = err.response.data?.message || err.response.data?.error || errorMessage;
+                    errorMessage = err.response.data?.message || `'${formData.userName}' zaten kayıtlı.`;
+                } else {
+                    errorMessage = err.response.data?.message || errorMessage;
                 }
             } else {
-                // Sunucuya hiç ulaşılamadıysa
-                errorMessage = "Sunucu ile bağlantı kurulamadı. Lütfen internetinizi kontrol edin.";
+                errorMessage = "Sunucu ile bağlantı kurulamadı.";
             }
 
             setError(errorMessage);
@@ -88,7 +84,6 @@ export function AddUserModal({ open, handleOpen, onUserAdded }) {
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
-        // Kullanıcı tekrar yazmaya başlayınca hata mesajını temizle
         setError("");
     };
 
@@ -105,7 +100,6 @@ export function AddUserModal({ open, handleOpen, onUserAdded }) {
                     onChange={handleChange}
                     autoComplete="off"
                 />
-
                 <Input
                     label="Kullanıcı Adı *"
                     name="userName"
@@ -113,7 +107,6 @@ export function AddUserModal({ open, handleOpen, onUserAdded }) {
                     onChange={handleChange}
                     autoComplete="off"
                 />
-
                 <Input
                     label="Şifre *"
                     name="password"
@@ -122,7 +115,6 @@ export function AddUserModal({ open, handleOpen, onUserAdded }) {
                     onChange={handleChange}
                     autoComplete="new-password"
                 />
-
                 <Input
                     label="Şifre Tekrar *"
                     name="confirmPassword"
@@ -131,7 +123,6 @@ export function AddUserModal({ open, handleOpen, onUserAdded }) {
                     onChange={handleChange}
                     autoComplete="new-password"
                 />
-
             </DialogBody>
             <DialogFooter>
                 <Button variant="text" color="red" onClick={handleClose} className="mr-1">

@@ -65,7 +65,7 @@ export function Tables() {
   const fetchIdleVehicles = async () => {
     try {
       // Backend endpoint'i (Varsayılan 7 gün)
-      const response = await apiClient.get("/admin/vehicles/idle-warnings?days=7");
+      const response = await apiClient.get("/admin/vehicles/idle-warnings?days=0");
       setIdleVehicles(response.data);
     } catch (error) {
       console.error("Uyarı verisi çekilemedi:", error);

@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Card, CardHeader, CardBody, Typography, Button } from "@material-tailwind/react";
-
-import { ToastContainer, toast } from 'react-toastify';
-
-
+import {toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import apiClient from "../../api/axiosConfig.js";
 import { AddUserModal } from "@/widgets/layout/AddUserModal";
 import { EditUserModal } from "@/widgets/layout/EditUserModal";
@@ -70,7 +68,7 @@ export function Profile() {
         }
     };
 
-    // --- MODAL CALLBACK'LERİ (DÜZELTİLEN KISIM) ---
+
 
     // Ekleme işlemi bitince bu çalışacak
     const onUserAddedCallback = () => {
@@ -138,25 +136,6 @@ export function Profile() {
 
     return (
         <>
-            {/* Toast Container En Üstte */}
-            <ToastContainer
-                position="top-right"
-                autoClose={3000}
-                hideProgressBar={false}
-                newestOnTop={false}
-                closeOnClick
-                rtl={false}
-                pauseOnFocusLoss
-                draggable
-                pauseOnHover
-                theme="colored"
-                style={{ zIndex: 99999 }}
-            />
-
-            {/* DÜZELTME:
-            Modallara artık direkt fetchUsers değil,
-            mesaj tetikleyen wrapper fonksiyonları gönderiyoruz.
-        */}
             <AddUserModal
                 open={openAddModal}
                 handleOpen={handleCloseAddModal}

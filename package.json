@@ -13,6 +13,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@heroicons/react": "2.0.18",
     "@material-tailwind/react": "2.1.4",
+    "@microsoft/signalr": "^10.0.0",
     "apexcharts": "3.44.0",
     "axios": "^1.12.2",
     "jwt-decode": "^4.0.0",
