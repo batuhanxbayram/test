@@ -44,7 +44,7 @@ export function Sidenav({ brandName, routes }) {
 
         <div className="m-4">
           {routes && routes
-            .filter((route) => route.layout === "dashboard")
+            .filter((route) => route.layout === "anasayfa")
             .map(({ layout, pages }, key) => (
               <ul key={key} className="mb-4 flex flex-col gap-1">
                 {pages && pages
