@@ -5,8 +5,11 @@ import TVQueuePage from "./pages/dashboard/TVQueuePage";
 
 function App() {
   return (
+
+
+
+
     <Routes>
-      {/* Dashboard'u sadece giriş yapmış kullanıcı görecek */}
       <Route
         path="/anasayfa/*"
         element={

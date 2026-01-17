@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Card, CardHeader, CardBody, Typography, Button } from "@material-tailwind/react";
 import {toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
 import apiClient from "../../api/axiosConfig.js";
 import { AddUserModal } from "@/widgets/layout/AddUserModal";
 import { EditUserModal } from "@/widgets/layout/EditUserModal";
@@ -11,7 +10,7 @@ export function Profile() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // Modal State'leri
+
     const [openAddModal, setOpenAddModal] = useState(false);
     const [openEditModal, setOpenEditModal] = useState(false);
     const [currentUser, setCurrentUser] = useState(null);
@@ -119,12 +118,17 @@ export function Profile() {
     };
 
     const confirmDelete = async (userId, userName) => {
+        // Önce toast'ı kapatıyoruz
         toast.dismiss();
 
         try {
-            await apiClient.delete(`/Users/${userId}`);
-            // Silme başarılı olduğunda handleDataChange çağırılır
-            handleDataChange(`'${userName}' adlı kullanıcı başarıyla silindi.`);
+            // API isteğini gönder
+            const response = await apiClient.delete(`/Users/${userId}`);
+
+            // Eğer API başarılı dönerse listeyi güncelle
+            if (response.status === 200 || response.status === 204) {
+                handleDataChange(`'${userName}' adlı kullanıcı başarıyla silindi.`);
+            }
         } catch (err) {
             console.error("Kullanıcı silinirken hata:", err);
             toast.error("Kullanıcı silinirken bir hata oluştu.");
