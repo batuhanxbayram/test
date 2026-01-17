@@ -132,16 +132,30 @@ export function AddVehicleModal({ open, handleOpen, onVehicleAdded }) {
 
                 {/* --- DEĞİŞİKLİK 6 --- */}
                 {/* Select'in 'value' prop'u artık 'selectedUserId' state'ine bağlı */}
-                <Select
-                    label="Kullanıcı Seçiniz *"
-                    name="appUserId"
-                    onChange={handleSelectChange}
-                    value={selectedUserId}
-                >
-                    {users.length > 0 ? (
-                        users.map(user => <Option key={user.id} value={user.id}>{user.fullName}</Option>)
-                    ) : ( <Option disabled>Atanabilir kullanıcı bulunamadı</Option> )}
-                </Select>
+            <Select
+    label="Kullanıcı Seçiniz *"
+    name="appUserId"
+    onChange={handleSelectChange}
+    value={selectedUserId}
+    // --- EKLEME BURADA ---
+    selected={(element) =>
+        element &&
+        React.cloneElement(element, {
+            disabled: true,
+            className: "flex items-center opacity-100 px-0 gap-2 pointer-events-none",
+        })
+    }
+>
+    {users.length > 0 ? (
+        users.map(user => (
+            <Option key={user.id} value={user.id}>
+                {user.fullName}
+            </Option>
+        ))
+    ) : (
+        <Option disabled>Atanabilir kullanıcı bulunamadı</Option>
+    )}
+</Select>
 
                 {/* Şoför Adı input'u tamamen kaldırılmıştı */}
 
