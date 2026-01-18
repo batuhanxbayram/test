@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { Card, CardHeader, CardBody, Typography, Button } from "@material-tailwind/react";
-import {toast } from 'react-toastify';
+import {
+    Card, CardHeader, CardBody, Typography, Button,
+    Dialog, DialogHeader, DialogBody, DialogFooter // 1. Dialog bileşenlerini ekle
+} from "@material-tailwind/react";
+import { toast } from 'react-toastify';
 import apiClient from "../../api/axiosConfig.js";
 import { AddUserModal } from "@/widgets/layout/AddUserModal";
 import { EditUserModal } from "@/widgets/layout/EditUserModal";
@@ -10,11 +13,16 @@ export function Profile() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-
+    // Modal State'leri
     const [openAddModal, setOpenAddModal] = useState(false);
     const [openEditModal, setOpenEditModal] = useState(false);
     const [currentUser, setCurrentUser] = useState(null);
 
+    // 2. SİLME İŞLEMİ İÇİN YENİ STATE'LER
+    const [openDeleteModal, setOpenDeleteModal] = useState(false);
+    const [userToDelete, setUserToDelete] = useState(null); // Silinecek kullanıcıyı tutar
+
+    // --- Modal Aç/Kapa Fonksiyonları ---
     const handleOpenAddModal = () => setOpenAddModal(true);
     const handleCloseAddModal = () => setOpenAddModal(false);
 
@@ -22,10 +30,20 @@ export function Profile() {
         setCurrentUser(user);
         setOpenEditModal(true);
     };
-
     const handleCloseEditModal = () => {
         setCurrentUser(null);
         setOpenEditModal(false);
+    };
+
+    // 3. SİLME MODALINI AÇAN FONKSİYON
+    const handleOpenDeleteModal = (user) => {
+        setUserToDelete(user);
+        setOpenDeleteModal(true);
+    };
+
+    const handleCloseDeleteModal = () => {
+        setUserToDelete(null);
+        setOpenDeleteModal(false);
     };
 
     const fetchUsers = async () => {
@@ -37,8 +55,6 @@ export function Profile() {
         } catch (err) {
             setError("Kullanıcı verileri yüklenirken bir hata oluştu.");
             console.error(err);
-            // Hata mesajını sessizce konsola yazabilir veya toast ile gösterebiliriz
-            // toast.error("Veriler yüklenirken hata oluştu.");
         } finally {
             setLoading(false);
         }
@@ -48,90 +64,28 @@ export function Profile() {
         fetchUsers();
     }, []);
 
-    // --- MERKEZİ VERİ VE MESAJ YÖNETİMİ ---
     const handleDataChange = (message) => {
-        // 1. Listeyi yenile
         fetchUsers();
-
-        // 2. Mesaj varsa Toast göster
         if(message) {
-            toast.success(message, {
-                position: "top-right",
-                autoClose: 3000,
-                hideProgressBar: false,
-                closeOnClick: true,
-                pauseOnHover: true,
-                draggable: true,
-                theme: "light",
-            });
+            toast.success(message);
         }
     };
 
+    const onUserAddedCallback = () => handleDataChange("Kullanıcı başarıyla eklendi.");
+    const onUserUpdatedCallback = () => handleDataChange("Kullanıcı bilgileri güncellendi.");
 
-
-    // Ekleme işlemi bitince bu çalışacak
-    const onUserAddedCallback = () => {
-        handleDataChange("Kullanıcı başarıyla eklendi.");
-    };
-
-    // Güncelleme işlemi bitince bu çalışacak
-    const onUserUpdatedCallback = () => {
-        handleDataChange("Kullanıcı bilgileri başarıyla güncellendi.");
-    };
-
-
-    // --- SİLME İŞLEMLERİ ---
-    const handleDeleteToast = (userId, userName) => {
-        toast.warn(
-            <div className="flex flex-col">
-                <p className="text-sm font-bold">
-                    **{userName}** adlı kullanıcıyı silmek istediğinizden emin misiniz?
-                </p>
-                <div className="flex justify-end gap-2 mt-2">
-                    <Button
-                        size="sm"
-                        color="red"
-                        onClick={() => confirmDelete(userId, userName)}
-                        className="text-[10px] py-1 px-2"
-                    >
-                        Evet, Sil
-                    </Button>
-                    <Button
-                        size="sm"
-                        variant="outlined"
-                        color="white"
-                        onClick={() => toast.dismiss()}
-                        className="text-[10px] py-1 px-2"
-                    >
-                        Hayır
-                    </Button>
-                </div>
-            </div>,
-            {
-                position: "top-center",
-                autoClose: false,
-                closeOnClick: false,
-                draggable: false,
-                style: { zIndex: 999999 }
-            }
-        );
-    };
-
-    const confirmDelete = async (userId, userName) => {
-        // Önce toast'ı kapatıyoruz
-        toast.dismiss();
+    // 4. ASIL SİLME İŞLEMİNİ YAPAN FONKSİYON
+    const confirmDelete = async () => {
+        if (!userToDelete) return;
 
         try {
-            // API isteğini gönder
-            const response = await apiClient.delete(`/Users/${userId}`);
-
-            // Eğer API başarılı dönerse listeyi güncelle
-            if (response.status === 200 || response.status === 204) {
-                handleDataChange(`'${userName}' adlı kullanıcı başarıyla silindi.`);
-            }
+            await apiClient.delete(`/Users/${userToDelete.id}`);
+            handleDataChange(`'${userToDelete.fullName}' adlı kullanıcı silindi.`);
+            handleCloseDeleteModal(); // Modalı kapat
         } catch (err) {
-            console.error("Kullanıcı silinirken hata:", err);
-            toast.error("Kullanıcı silinirken bir hata oluştu.");
+            console.error("Silme hatası:", err);
+            toast.error("Silme işlemi başarısız oldu.");
+            handleCloseDeleteModal(); // Hata olsa da modalı kapat
         }
     };
 
@@ -152,6 +106,33 @@ export function Profile() {
                 userToEdit={currentUser}
                 onUserUpdated={onUserUpdatedCallback}
             />
+
+            {/* 5. SİLME ONAY MODALI (Dialog) */}
+            <Dialog open={openDeleteModal} handler={handleCloseDeleteModal} size="xs">
+                <DialogHeader>Silme Onayı</DialogHeader>
+                <DialogBody divider>
+                    {userToDelete && (
+                        <Typography>
+                            <span className="font-bold">{userToDelete.fullName}</span> adlı kullanıcıyı silmek istediğinizden emin misiniz?
+                            <br/><br/>
+
+                        </Typography>
+                    )}
+                </DialogBody>
+                <DialogFooter>
+                    <Button
+                        variant="text"
+                        color="blue-gray"
+                        onClick={handleCloseDeleteModal}
+                        className="mr-1"
+                    >
+                        İptal
+                    </Button>
+                    <Button variant="gradient" color="red" onClick={confirmDelete}>
+                        Evet, Sil
+                    </Button>
+                </DialogFooter>
+            </Dialog>
 
             <div className="mt-12 mb-8 flex flex-col gap-12">
                 <Card>
@@ -200,6 +181,7 @@ export function Profile() {
                                                 Düzenle
                                             </Typography>
 
+
                                             <Typography
                                                 as="a"
                                                 href="#"
@@ -208,7 +190,7 @@ export function Profile() {
                                                 className="font-semibold uppercase text-xs cursor-pointer hover:underline"
                                                 onClick={(e) => {
                                                     e.preventDefault();
-                                                    handleDeleteToast(user.id, user.fullName);
+                                                    handleOpenDeleteModal(user);
                                                 }}
                                             >
                                                 Sil
