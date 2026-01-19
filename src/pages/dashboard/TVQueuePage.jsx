@@ -202,14 +202,7 @@ const TVQueuePage = () => {
           ))}
         </div>
 
-        <div className="mt-2 flex justify-between items-center px-4 py-1">
-          <div className="flex gap-1.5">
-            {[...Array(Math.ceil(data.length / 3))].map((_, i) => (
-                <div key={i} className={`h-1.5 rounded-full transition-all duration-700 ${Math.floor(currentIndex/3) === i ? 'w-10 bg-[#00BFA5]' : 'w-2 bg-slate-300'}`}></div>
-            ))}
-          </div>
-          <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] italic">Canlı Sevkiyat Verisi</span>
-        </div>
+
       </div>
   );
 };
