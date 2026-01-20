@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { Typography, Card, Spinner, Button, CardHeader, CardBody } from "@material-tailwind/react";
 import { ForwardIcon, InformationCircleIcon } from "@heroicons/react/24/solid";
-import apiClient from "@/api/axiosConfig"; // Yolunu projene göre ayarla
+import apiClient from "@/api/axiosConfig";
 import { useMaterialTailwindController } from "@/context";
 import { VehicleQueueCard } from "@/widgets/layout/VehicleQueueCard";
 
-// 1. SignalR Kütüphanesini Çağırıyoruz
-import { HubConnectionBuilder, LogLevel } from "@microsoft/signalr";
+// 1. HttpTransportType EKLENDİ (Bağlantı kararlılığı için şart)
+import { HubConnectionBuilder, LogLevel, HttpTransportType } from "@microsoft/signalr";
 
 export function Home() {
     const [controller] = useMaterialTailwindController();
@@ -16,8 +16,8 @@ export function Home() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-
-    const HUB_URL = "https://localhost:7093/hubs/queue";
+    // 2. URL GÜNCELLENDİ: Localhost yerine Sunucu IP'si
+    const HUB_URL = "http://72.62.114.221:5000/hubs/queue";
 
     const fetchAllQueues = async () => {
         try {
@@ -37,19 +37,22 @@ export function Home() {
 
         // --- SIGNALR BAĞLANTISI ---
         const connection = new HubConnectionBuilder()
-            .withUrl(HUB_URL)
-            .withAutomaticReconnect() // Bağlantı koparsa (internet giderse) tekrar dene
+            .withUrl(HUB_URL, {
+                // 3. BAĞLANTI AYARLARI GÜÇLENDİRİLDİ
+                skipNegotiation: true,
+                transport: HttpTransportType.WebSockets
+            })
+            .withAutomaticReconnect()
             .configureLogging(LogLevel.Information)
             .build();
 
         connection.start()
             .then(() => {
-                console.log("🟢 TV Ekranı: SignalR Bağlandı!");
+                console.log("🟢 Home Sayfası: SignalR Bağlandı!");
 
-                // Backend'den "ReceiveQueueUpdate" mesajı gelince çalışacak
                 connection.on("ReceiveQueueUpdate", () => {
                     console.log("🔔 Güncelleme sinyali geldi! Liste yenileniyor...");
-                    fetchAllQueues(); // Verileri sunucudan tekrar iste
+                    fetchAllQueues();
                 });
             })
             .catch(err => console.error("🔴 SignalR Bağlantı Hatası:", err));
@@ -58,14 +61,12 @@ export function Home() {
         return () => {
             connection.stop();
         };
-        // Not: setInterval artık yok!
     }, []);
 
     const handleNextVehicle = async (routeId) => {
         try {
             await apiClient.post(`/admin/vehicles/${routeId}/move-first-to-end`);
-            // Buradan fetchAllQueues çağırmamıza gerek yok,
-            // çünkü Backend işlem bitince SignalR ile "Güncelle" diyecek.
+            // Manuel fetch çağırmıyoruz, SignalR zaten tetikleyecek.
         } catch (error) {
             console.error("Hata:", error);
             alert("İşlem başarısız.");
@@ -79,7 +80,6 @@ export function Home() {
         <div className="mt-6 md:mt-12">
             <div className="flex flex-col md:flex-row gap-6 pb-4 md:h-[calc(100vh-80px)] md:overflow-x-auto md:overflow-y-hidden">
                 {routesWithQueues.map(route => {
-                    // Sadece AKTİF olanları göster
                     const activeVehicles = route.queuedVehicles.filter(v => v.isActive);
 
                     return (

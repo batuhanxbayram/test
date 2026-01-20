@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import apiClient from "../../api/axiosConfig";
-import { HubConnectionBuilder, LogLevel } from "@microsoft/signalr";
+// 1. LogLevel EKLENDİ (Eksikti, hata verirdi)
+import { HubConnectionBuilder, HttpTransportType, LogLevel } from '@microsoft/signalr';
 
 const TVQueuePage = () => {
   const [data, setData] = useState([]);
@@ -9,29 +10,23 @@ const TVQueuePage = () => {
   const [loading, setLoading] = useState(true);
 
   const connectionRef = useRef(null);
-  const HUB_URL = "https://localhost:7093/hubs/queue";
 
-  // --- YENİ EKLENEN FONKSİYON: PLAKA FORMATLAYICI ---
+  // 2. URL GÜNCELLENDİ: Localhost yerine Sunucu IP'si ve Port 5000 yazıldı.
+  // SSL (https) olmadığı için http kullanıyoruz.
+  const HUB_URL = "http://72.62.114.221:5000/hubs/queue";
+
+  // --- PLAKA FORMATLAYICI ---
   const formatLicensePlate = (plate) => {
     if (!plate) return "";
-
-    // 1. Önce olası boşlukları temizle ve hepsini büyük harf yap
     const cleanPlate = plate.replace(/\s/g, "").toUpperCase();
-
-    // 2. Regex Mantığı:
-    // ^(\d{2})   -> Başlangıçtaki 2 rakamı yakala (İl Kodu)
-    // ([A-Z]+)   -> Ortadaki harfleri yakala (Uzunluğu ne olursa olsun)
-    // (\d+)$     -> Sondaki rakamları yakala
     const regex = /^(\d{2})([A-Z]+)(\d+)$/;
     const match = cleanPlate.match(regex);
-
-    // 3. Eğer standart bir plaka ise formatla, değilse olduğu gibi bırak (Örn: Özel plakalar)
     if (match) {
       return `${match[1]} ${match[2]} ${match[3]}`;
     }
     return cleanPlate;
   };
-  // --------------------------------------------------
+  // -------------------------
 
   const fetchData = async () => {
     try {
@@ -70,8 +65,13 @@ const TVQueuePage = () => {
 
     if (connectionRef.current) return;
 
+    // 3. BAĞLANTI AYARLARI GÜÇLENDİRİLDİ
     const connection = new HubConnectionBuilder()
-        .withUrl(HUB_URL)
+        .withUrl(HUB_URL, {
+          // WebSocket'i zorla (Canlı sunucuda CORS/Proxy sorunlarını engeller)
+          skipNegotiation: true,
+          transport: HttpTransportType.WebSockets
+        })
         .withAutomaticReconnect()
         .configureLogging(LogLevel.Information)
         .build();
@@ -80,7 +80,7 @@ const TVQueuePage = () => {
 
     connection.start()
         .then(() => {
-          console.log("🟢 TV Ekranı: SignalR Bağlandı!");
+          console.log("🟢 TV Ekranı: SignalR Canlı Sunucuya Bağlandı!");
           connection.on("ReceiveQueueUpdate", () => {
             console.log("🔔 Güncelleme sinyali alındı.");
             fetchData();
@@ -134,7 +134,6 @@ const TVQueuePage = () => {
 
   return (
       <div className="h-screen w-screen bg-[#E2E8F0] text-[#334155] overflow-hidden flex flex-col p-2 font-sans">
-
         <div className="flex justify-between items-center px-6 py-2 bg-[#475569] rounded-xl mb-2 shadow-md shrink-0 border-b-2 border-[#334155]">
           <div className="flex items-center gap-4">
             <div className="bg-[#64748B] text-white w-9 h-9 flex items-center justify-center rounded-lg font-black text-lg shadow-inner border border-white/10">
@@ -153,7 +152,6 @@ const TVQueuePage = () => {
           </div>
         </div>
 
-        {/* ANA GÜZERGAH ALANI */}
         <div className="grid grid-cols-3 gap-3 flex-grow overflow-hidden">
           {currentRoutes.map((route, idx) => (
               <div key={`${currentIndex}-${idx}`} className="flex flex-col bg-white rounded-2xl shadow-xl border border-slate-300 overflow-hidden h-full">
@@ -187,8 +185,6 @@ const TVQueuePage = () => {
                                 <span className="text-[9px] font-black text-slate-400 w-4 text-right shrink-0 font-mono tracking-tighter">
                                   {String(vehicleIndex + 1).padStart(2, '0')}
                                 </span>
-
-                                {/* DEĞİŞİKLİK BURADA: formatLicensePlate KULLANILDI */}
                                 <span className={`font-mono text-[13px] truncate leading-none antialiased ${vehicle ? "font-black text-[#1E293B] tracking-wider uppercase drop-shadow-sm" : "invisible"}`}>
                                   {vehicle ? formatLicensePlate(vehicle.plate) : ""}
                                 </span>
@@ -201,8 +197,6 @@ const TVQueuePage = () => {
               </div>
           ))}
         </div>
-
-
       </div>
   );
 };
