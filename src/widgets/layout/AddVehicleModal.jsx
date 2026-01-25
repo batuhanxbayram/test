@@ -10,7 +10,6 @@ import {
     Option,
     Typography,
 } from "@material-tailwind/react";
-// TOAST ENTEGRASYONU
 import { toast } from 'react-toastify';
 import apiClient from "../../api/axiosConfig.js";
 
@@ -19,11 +18,7 @@ const TURKISH_PLATE_REGEX = /^(\d{2})\s*([A-Z]{1,3})\s*(\d{1,4})$/;
 
 export function AddVehicleModal({ open, handleOpen, onVehicleAdded }) {
     const [users, setUsers] = useState([]);
-
-    // --- DEĞİŞİKLİK 1 ---
-    // 'appUserId' state'ini 'formData'dan ayırıyoruz.
-    // 'driverName' state'den tamamen kaldırıldı.
-    const [selectedUserId, setSelectedUserId] = useState(""); // Seçilen kullanıcı ID'si için ayrı state
+    const [selectedUserId, setSelectedUserId] = useState("");
     const [formData, setFormData] = useState({
         licensePlate: "",
         phoneNumber: "",
@@ -58,29 +53,22 @@ export function AddVehicleModal({ open, handleOpen, onVehicleAdded }) {
         setFormData(prev => ({ ...prev, [name]: newValue }));
     };
 
-    // --- DEĞİŞİKLİK 2 ---
     // Select (Kullanıcı) değişikliği için
-    // Bu fonksiyon artık doğrudan 'selectedUserId' state'ini güncelliyor.
     const handleSelectChange = (value) => {
         setSelectedUserId(value);
     };
 
     const clearForm = () => {
-        // --- DEĞİŞİKLİK 3 ---
-        // Formu temizlerken her iki state'i de sıfırlıyoruz.
         setFormData({ licensePlate: "", phoneNumber: "" });
         setSelectedUserId("");
         setError("");
     };
 
     const handleClose = () => {
-        // clearForm(); // useEffect [open] içinde zaten çağrılıyor
         handleOpen();
     }
 
     const handleSubmit = async () => {
-        // --- DEĞİŞİKLİK 4 ---
-        // Zorunlu alan kontrolü 'selectedUserId' üzerinden yapılıyor
         if (!formData.licensePlate || !selectedUserId) {
             const msg = "Plaka ve Kullanıcı alanları zorunludur.";
             setError(msg);
@@ -96,12 +84,10 @@ export function AddVehicleModal({ open, handleOpen, onVehicleAdded }) {
         }
 
         try {
-            // --- DEĞİŞİKLİK 5 ---
-            // Payload'u gönderirken 'formData' ve 'selectedUserId' state'lerini birleştiriyoruz.
             const payload = {
                 licensePlate: formData.licensePlate.trim().replace(/\s+/g, ''),
                 phoneNumber: formData.phoneNumber,
-                appUserId: selectedUserId // Ayrı state'den gelen ID
+                appUserId: selectedUserId
             };
 
             await apiClient.post("/admin/vehicles", payload);
@@ -130,34 +116,24 @@ export function AddVehicleModal({ open, handleOpen, onVehicleAdded }) {
                     onChange={handleChange}
                 />
 
-                {/* --- DEĞİŞİKLİK 6 --- */}
-                {/* Select'in 'value' prop'u artık 'selectedUserId' state'ine bağlı */}
-            <Select
-    label="Kullanıcı Seçiniz *"
-    name="appUserId"
-    onChange={handleSelectChange}
-    value={selectedUserId}
-    // --- EKLEME BURADA ---
-    selected={(element) =>
-        element &&
-        React.cloneElement(element, {
-            disabled: true,
-            className: "flex items-center opacity-100 px-0 gap-2 pointer-events-none",
-        })
-    }
->
-    {users.length > 0 ? (
-        users.map(user => (
-            <Option key={user.id} value={user.id}>
-                {user.fullName}
-            </Option>
-        ))
-    ) : (
-        <Option disabled>Atanabilir kullanıcı bulunamadı</Option>
-    )}
-</Select>
-
-                {/* Şoför Adı input'u tamamen kaldırılmıştı */}
+                {/* DÜZELTİLEN KISIM: 'selected' prop'u kaldırıldı */}
+                <Select
+                    label="Kullanıcı Seçiniz *"
+                    name="appUserId"
+                    onChange={handleSelectChange}
+                    value={selectedUserId}
+                >
+                    {users.length > 0 ? (
+                        users.map(user => (
+                            // String(user.id) ile veri tipi garantiye alındı
+                            <Option key={user.id} value={String(user.id)}>
+                                {user.fullName}
+                            </Option>
+                        ))
+                    ) : (
+                        <Option disabled>Atanabilir kullanıcı bulunamadı</Option>
+                    )}
+                </Select>
 
                 <Input
                     label="Telefon Numarası (Opsiyonel)"
