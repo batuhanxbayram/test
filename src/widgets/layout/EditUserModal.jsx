@@ -4,12 +4,10 @@ import apiClient from "../../api/axiosConfig.js";
 import { toast } from 'react-toastify';
 
 export function EditUserModal({ open, handleOpen, userToEdit, onUserUpdated }) {
-    // 1. State'e diğer alanları da ekledik
+    // Sadece Swagger'da istenen ve formda olan alanlar
     const [formData, setFormData] = useState({
         fullName: "",
-        userName: "",
-        licensePlate: "", // Yeni
-        phoneNumber: "",  // Yeni
+        userName: "", // Sadece ekranda göstermek için, göndermeyeceğiz
         password: "",
         confirmPassword: ""
     });
@@ -22,14 +20,11 @@ export function EditUserModal({ open, handleOpen, userToEdit, onUserUpdated }) {
         });
     };
 
-    // 2. useEffect ile gelen verilerin Hepsini dolduruyoruz
     useEffect(() => {
         if (userToEdit) {
             setFormData({
                 fullName: userToEdit.fullName || "",
                 userName: userToEdit.userName || "",
-                licensePlate: userToEdit.licensePlate || "", // Varsa doldur, yoksa boş
-                phoneNumber: userToEdit.phoneNumber || "",   // Varsa doldur, yoksa boş
                 password: "",
                 confirmPassword: ""
             });
@@ -37,7 +32,7 @@ export function EditUserModal({ open, handleOpen, userToEdit, onUserUpdated }) {
     }, [userToEdit]);
 
     const handleSubmit = async () => {
-        // Şifre kontrolü
+        // Şifrelerden biri girilmişse Frontend kontrolü
         if (formData.password || formData.confirmPassword) {
             if (formData.password !== formData.confirmPassword) {
                 notifyError("Şifreler uyuşmuyor!");
@@ -49,30 +44,33 @@ export function EditUserModal({ open, handleOpen, userToEdit, onUserUpdated }) {
             }
         }
 
-        // 3. Payload hazırlığı (Backend'in beklediği tam yapı)
+        // --- PAYLOAD HAZIRLIĞI (SWAGGER'A GÖRE) ---
+        // ID zaten URL'de (/Users/{id}) gidiyor, body'ye koymaya gerek yok.
+        // UserName Swagger'da yok, o yüzden onu da çıkardık.
         const payload = {
-            id: userToEdit.id, // ID göndermek her zaman güvenlidir
-            fullName: formData.fullName,
-            userName: userToEdit.userName,
-            licensePlate: formData.licensePlate, // Diğer verileri de koruyoruz
-            phoneNumber: formData.phoneNumber
+            fullName: formData.fullName
         };
 
-        // Eğer şifre doluysa pakete ekle (Boşsa hiç gönderme)
+        // Eğer şifre kutusu doluysa, password VE confirmPassword alanlarını ekle
+        // Swagger modelinde confirmPassword olduğu için onu da göndermeliyiz!
         if (formData.password && formData.password.trim() !== "") {
             payload.password = formData.password;
+            payload.confirmPassword = formData.confirmPassword;
         }
 
         try {
             await apiClient.put(`/Users/${userToEdit.id}`, payload);
 
-            toast.success("Kullanıcı başarıyla güncellendi!"); // Başarı mesajı ekledik
+            toast.success("Kullanıcı güncellendi!");
             onUserUpdated();
             handleOpen();
         } catch (err) {
             console.error(err);
-            // Backend validasyon hatalarını yakalamak için detaylı kontrol
-            const backendMsg = err.response?.data?.title || err.response?.data?.message || "Güncelleme başarısız.";
+            // Hata mesajını yakalama
+            const backendMsg = err.response?.data?.errors
+                ? JSON.stringify(err.response.data.errors) // Validation hatası dönerse
+                : (err.response?.data?.message || "Güncelleme başarısız.");
+
             notifyError(backendMsg);
         }
     };
@@ -82,10 +80,11 @@ export function EditUserModal({ open, handleOpen, userToEdit, onUserUpdated }) {
             <DialogHeader className="text-blue-gray-900 font-bold px-6 pt-6 uppercase tracking-wider text-sm">
                 Kullanıcı Düzenle
             </DialogHeader>
-            <DialogBody divider className="flex flex-col gap-6 py-8 px-6 overflow-y-auto max-h-[60vh]"> {/* Scroll eklendi */}
+            <DialogBody divider className="flex flex-col gap-6 py-8 px-6">
 
                 {/* Ad Soyad */}
                 <div className="flex flex-col gap-1">
+                    <Typography variant="small" color="blue-gray" className="font-semibold ml-1">Tam Ad</Typography>
                     <Input
                         label="Ad Soyad"
                         name="fullName"
@@ -95,8 +94,9 @@ export function EditUserModal({ open, handleOpen, userToEdit, onUserUpdated }) {
                     />
                 </div>
 
-                {/* Kullanıcı Adı */}
+                {/* Kullanıcı Adı (Salt Okunur) */}
                 <div className="flex flex-col gap-1 opacity-70">
+                    <Typography variant="small" color="blue-gray" className="font-semibold ml-1 text-xs">Kullanıcı Adı (Değiştirilemez)</Typography>
                     <Input
                         label="Kullanıcı Adı"
                         value={formData.userName}
@@ -106,27 +106,13 @@ export function EditUserModal({ open, handleOpen, userToEdit, onUserUpdated }) {
                     />
                 </div>
 
-                {/* --- YENİ ALANLAR (Profilde gözüken ama düzenlenemeyenler eklendi) --- */}
-                <div className="flex gap-4">
-                    <Input
-                        label="Plaka"
-                        value={formData.licensePlate}
-                        onChange={(e) => setFormData({...formData, licensePlate: e.target.value})}
-                        size="lg"
-                    />
-                    <Input
-                        label="Telefon"
-                        value={formData.phoneNumber}
-                        onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})}
-                        size="lg"
-                    />
-                </div>
-                {/* ------------------------------------------------------------------ */}
-
                 {/* Şifre Bölümü */}
                 <div className="bg-blue-gray-50/30 p-4 rounded-xl border border-dashed border-blue-gray-200 flex flex-col gap-4">
                     <Typography variant="small" className="font-bold text-blue-gray-600 flex items-center gap-2">
-                        <span>🔐</span> Şifre Değiştir
+                        <span>🔐</span> Şifre İşlemleri
+                    </Typography>
+                    <Typography variant="small" className="text-[10px] text-blue-gray-400 -mt-3 italic">
+                        Şifreyi değiştirmeyecekseniz boş bırakın.
                     </Typography>
 
                     <Input
