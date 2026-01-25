@@ -20,7 +20,7 @@ import apiClient from "../../api/axiosConfig.js";
 import { AddVehicleModal } from "@/widgets/layout/AddVehicleModal";
 import { EditVehicleModal } from "@/widgets/layout/EditVehicleModal";
 
-// --- YARDIMCI FONKSİYON ---
+
 const toTitleCase = (str) => {
   if (!str) return "";
   return str
@@ -65,7 +65,7 @@ export function Tables() {
   const fetchIdleVehicles = async () => {
     try {
       // Backend endpoint'i (Varsayılan 7 gün)
-      const response = await apiClient.get("/admin/vehicles/idle-warnings?days=0");
+      const response = await apiClient.get("/admin/vehicles/idle-warnings?days=7");
       setIdleVehicles(response.data);
     } catch (error) {
       console.error("Uyarı verisi çekilemedi:", error);
