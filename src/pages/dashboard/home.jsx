@@ -28,7 +28,7 @@ export function Home() {
     const [activeTab, setActiveTab] = useState(""); // Seçili güzergah ID'si
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
-    const HUB_URL = "http://72.62.114.221:5000/hubs/queue";
+    const HUB_URL = "https://75ymkt.com/hubs/queue";
 
     // Ekran boyutunu dinle (Mobil mi Masaüstü mü?)
     useEffect(() => {

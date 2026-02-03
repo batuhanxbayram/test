@@ -3,7 +3,11 @@ import axios from "axios";
 
 
 const apiClient = axios.create({
-    baseURL: "http://72.62.114.221:5000/api",
+
+    baseURL: "https://75ymkt.com/api",
+    headers: {
+        "Content-Type": "application/json",
+    },
 });
 
 

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
 import apiClient from "../../api/axiosConfig";
-// 1. LogLevel EKLENDİ (Eksikti, hata verirdi)
 import { HubConnectionBuilder, HttpTransportType, LogLevel } from '@microsoft/signalr';
 
 const TVQueuePage = () => {
@@ -11,9 +10,10 @@ const TVQueuePage = () => {
 
   const connectionRef = useRef(null);
 
-  // 2. URL GÜNCELLENDİ: Localhost yerine Sunucu IP'si ve Port 5000 yazıldı.
-  // SSL (https) olmadığı için http kullanıyoruz.
-  const HUB_URL = "http://72.62.114.221:5000/hubs/queue";
+  // 🟢 KRİTİK GÜNCELLEME:
+  // Siteniz artık SSL (HTTPS) olduğu için burası domain adresi olmalı.
+  // IP adresi (http) kalırsa "Mixed Content" hatası verir ve bağlanmaz.
+  const HUB_URL = "https://75ymkt.com/hubs/queue";
 
   // --- PLAKA FORMATLAYICI ---
   const formatLicensePlate = (plate) => {
@@ -65,10 +65,9 @@ const TVQueuePage = () => {
 
     if (connectionRef.current) return;
 
-    // 3. BAĞLANTI AYARLARI GÜÇLENDİRİLDİ
+    // BAĞLANTI AYARLARI
     const connection = new HubConnectionBuilder()
         .withUrl(HUB_URL, {
-          // WebSocket'i zorla (Canlı sunucuda CORS/Proxy sorunlarını engeller)
           skipNegotiation: true,
           transport: HttpTransportType.WebSockets
         })
@@ -80,7 +79,7 @@ const TVQueuePage = () => {
 
     connection.start()
         .then(() => {
-          console.log("🟢 TV Ekranı: SignalR Canlı Sunucuya Bağlandı!");
+          console.log("🟢 TV Ekranı: SignalR (HTTPS) Bağlandı!");
           connection.on("ReceiveQueueUpdate", () => {
             console.log("🔔 Güncelleme sinyali alındı.");
             fetchData();
