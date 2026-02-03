@@ -1,11 +1,19 @@
 import React, { useState, useEffect } from "react";
-import { Typography, Card, Spinner, Button, CardHeader, CardBody } from "@material-tailwind/react";
+import {
+    Typography,
+    Card,
+    Spinner,
+    Button,
+    CardHeader,
+    CardBody,
+    Tabs,
+    TabsHeader,
+    Tab
+} from "@material-tailwind/react";
 import { ForwardIcon, InformationCircleIcon } from "@heroicons/react/24/solid";
 import apiClient from "@/api/axiosConfig";
 import { useMaterialTailwindController } from "@/context";
 import { VehicleQueueCard } from "@/widgets/layout/VehicleQueueCard";
-
-// 1. HttpTransportType EKLENDİ (Bağlantı kararlılığı için şart)
 import { HubConnectionBuilder, LogLevel, HttpTransportType } from "@microsoft/signalr";
 
 export function Home() {
@@ -16,13 +24,29 @@ export function Home() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // 2. URL GÜNCELLENDİ: Localhost yerine Sunucu IP'si
+    // --- YENİ EKLENEN KISIM: MOBİL KONTROLÜ VE SEÇİLİ SEKME ---
+    const [activeTab, setActiveTab] = useState(""); // Seçili güzergah ID'si
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
     const HUB_URL = "http://72.62.114.221:5000/hubs/queue";
+
+    // Ekran boyutunu dinle (Mobil mi Masaüstü mü?)
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 768);
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
+    }, []);
 
     const fetchAllQueues = async () => {
         try {
             const response = await apiClient.get("/queues/all");
-            setRoutesWithQueues(response.data);
+            const data = response.data;
+            setRoutesWithQueues(data);
+
+            // Veri ilk geldiğinde, eğer mobildeysek ve hiç sekme seçilmemişse ilkini seç
+            if (data.length > 0 && !activeTab) {
+                setActiveTab(data[0].routeId); // İlk güzergahı varsayılan yap
+            }
         } catch (err) {
             console.error(err);
             if (loading) setError("Veri yüklenemedi.");
@@ -32,13 +56,10 @@ export function Home() {
     };
 
     useEffect(() => {
-        // İlk açılışta veriyi çek
         fetchAllQueues();
 
-        // --- SIGNALR BAĞLANTISI ---
         const connection = new HubConnectionBuilder()
             .withUrl(HUB_URL, {
-                // 3. BAĞLANTI AYARLARI GÜÇLENDİRİLDİ
                 skipNegotiation: true,
                 transport: HttpTransportType.WebSockets
             })
@@ -49,15 +70,13 @@ export function Home() {
         connection.start()
             .then(() => {
                 console.log("🟢 Home Sayfası: SignalR Bağlandı!");
-
                 connection.on("ReceiveQueueUpdate", () => {
-                    console.log("🔔 Güncelleme sinyali geldi! Liste yenileniyor...");
+                    console.log("🔔 Güncelleme geldi!");
                     fetchAllQueues();
                 });
             })
             .catch(err => console.error("🔴 SignalR Bağlantı Hatası:", err));
 
-        // Sayfadan çıkınca bağlantıyı kopar
         return () => {
             connection.stop();
         };
@@ -66,7 +85,6 @@ export function Home() {
     const handleNextVehicle = async (routeId) => {
         try {
             await apiClient.post(`/admin/vehicles/${routeId}/move-first-to-end`);
-            // Manuel fetch çağırmıyoruz, SignalR zaten tetikleyecek.
         } catch (error) {
             console.error("Hata:", error);
             alert("İşlem başarısız.");
@@ -76,14 +94,50 @@ export function Home() {
     if (loading) return <div className="flex justify-center items-center h-screen"><Spinner className="h-16 w-16" /></div>;
     if (error) return <Typography color="red" className="mt-12 text-center">{error}</Typography>;
 
+    // --- MOBİL İÇİN FİLTRELEME ---
+    // Eğer mobildeysek sadece seçili olanı, değilsek hepsini göster
+    const displayedRoutes = isMobile
+        ? routesWithQueues.filter(r => String(r.routeId) === String(activeTab))
+        : routesWithQueues;
+
     return (
         <div className="mt-6 md:mt-12">
-            <div className="flex flex-col md:flex-row gap-6 pb-4 md:h-[calc(100vh-80px)] md:overflow-x-auto md:overflow-y-hidden">
-                {routesWithQueues.map(route => {
+
+            {/* --- MOBİL İÇİN SEKME MENÜSÜ --- */}
+            {isMobile && routesWithQueues.length > 0 && (
+                <div className="mb-6 overflow-x-auto pb-2">
+                    <Tabs value={activeTab} className="w-full">
+                        <TabsHeader
+                            className="bg-transparent"
+                            indicatorProps={{
+                                className: "bg-gray-900/10 shadow-none !text-gray-900",
+                            }}
+                        >
+                            {routesWithQueues.map(({ routeId, routeName }) => (
+                                <Tab
+                                    key={routeId}
+                                    value={routeId}
+                                    onClick={() => setActiveTab(routeId)}
+                                    className={activeTab === routeId ? "font-bold text-gray-900" : ""}
+                                >
+                                    {routeName}
+                                </Tab>
+                            ))}
+                        </TabsHeader>
+                    </Tabs>
+                </div>
+            )}
+
+            {/* --- LİSTELEME ALANI --- */}
+            <div className={`
+                flex flex-col gap-6 pb-4
+                ${!isMobile ? "md:flex-row md:h-[calc(100vh-80px)] md:overflow-x-auto md:overflow-y-hidden" : ""}
+            `}>
+                {displayedRoutes.map(route => {
                     const activeVehicles = route.queuedVehicles.filter(v => v.isActive);
 
                     return (
-                        <div key={route.routeId} className="w-full md:w-80 flex-shrink-0">
+                        <div key={route.routeId} className="w-full md:w-80 flex-shrink-0 transition-all duration-300">
                             <Card className="flex flex-col h-full shadow-lg border border-gray-200 bg-white">
                                 <CardHeader variant="gradient" color="gray" className="m-4 p-4 flex items-center justify-between rounded-lg flex-shrink-0">
                                     <div className="flex-1 overflow-hidden">
@@ -98,7 +152,7 @@ export function Home() {
                                         <div className="ml-4 flex-shrink-0">
                                             <Button
                                                 size="sm"
-                                                className="flex items-center gap-2"
+                                                className="flex items-center gap-2 bg-white text-gray-900 hover:bg-gray-100"
                                                 onClick={() => handleNextVehicle(route.routeId)}
                                                 disabled={activeVehicles.length < 2}
                                             >
@@ -107,7 +161,7 @@ export function Home() {
                                         </div>
                                     )}
                                 </CardHeader>
-                                <CardBody className="p-4 pt-0 flex-grow overflow-y-auto">
+                                <CardBody className="p-4 pt-0 flex-grow overflow-y-auto max-h-[60vh] md:max-h-full">
                                     {activeVehicles.length > 0 ? (
                                         <div className="flex flex-col gap-2">
                                             {activeVehicles.map((vehicle, index) => (
@@ -115,7 +169,7 @@ export function Home() {
                                             ))}
                                         </div>
                                     ) : (
-                                        <div className="flex flex-col items-center justify-center h-full text-center text-blue-gray-400">
+                                        <div className="flex flex-col items-center justify-center py-10 text-center text-blue-gray-400">
                                             <InformationCircleIcon className="w-12 h-12 mb-2" />
                                             <Typography variant="small" className="font-semibold">Sırada Araç Yok</Typography>
                                         </div>
