@@ -1,7 +1,9 @@
 {
-  "name": "material-tailwind-dashboard-react",
+  "name":"75-nolu-kooperatif-takip-sistemi",
   "private": true,
-  "version": "2.1.0",
+  "description": "S.S. 75 No'lu Yarımca Motorlu Taşıyıcılar Kooperatifi için araç takip sistemi.",
+  "author": "Batuhan Bayram",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host",
