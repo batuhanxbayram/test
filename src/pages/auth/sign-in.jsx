@@ -60,11 +60,11 @@ export function SignIn() {
   return (
       <section
           className="min-h-screen flex items-center justify-center bg-cover bg-center"
-          style={{ backgroundImage: `url(/img/background.jpg)` }}
+          style={{ backgroundImage: `url(/img/background.webp)` }}
       >
         <Card className="w-full max-w-md p-8 bg-white/90 backdrop-blur-sm shadow-2xl rounded-2xl">
           <div className="text-center">
-            <img src="/img/klogo.png" alt="Logo" className="mx-auto h-32 w-auto mb-4" /> {/* Boyut ve boşluk ayarlandı */}
+            <img src="/img/klogo.webp" alt="Logo" className="mx-auto h-32 w-auto mb-4  select-none drag-none pointer-events-none" />
           </div>
           <div className="flex flex-col gap-6">
             <div>
