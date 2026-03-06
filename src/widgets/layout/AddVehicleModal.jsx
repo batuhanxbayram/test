@@ -10,52 +10,56 @@ import {
     Option,
     Typography,
 } from "@material-tailwind/react";
-import { toast } from 'react-toastify';
+import { toast } from "react-toastify";
 import apiClient from "../../api/axiosConfig.js";
 
-// TÜRKİYE PLAKA FORMATI REGEX KURALI
 const TURKISH_PLATE_REGEX = /^(\d{2})\s*([A-Z]{1,3})\s*(\d{1,4})$/;
 
 export function AddVehicleModal({ open, handleOpen, onVehicleAdded }) {
     const [users, setUsers] = useState([]);
-    const [selectedUserId, setSelectedUserId] = useState("");
+    const [selectedUserId, setSelectedUserId] = useState(""); // opsiyonel
     const [formData, setFormData] = useState({
         licensePlate: "",
         phoneNumber: "",
     });
-
     const [error, setError] = useState("");
+
+    const extractApiError = (err, fallback) => {
+        const data = err?.response?.data;
+        if (!data) return fallback;
+        if (typeof data === "string") return data;
+        return data.message || data.error || data.title || fallback;
+    };
 
     useEffect(() => {
         if (open) {
-            // Modal açıldığında kullanıcıları çek
-            apiClient.get("/Users/without-vehicle")
-                .then(response => {
-                    setUsers(response.data);
+            // Artık tüm kullanıcılar gelebilir (multi-vehicle için)
+            apiClient
+                .get("/Users/without-vehicle")
+                .then((response) => {
+                    setUsers(response.data || []);
                     setError("");
                 })
-                .catch(err => {
-                    console.error("Kullanıcılar çekilirken hata oluştu:", err);
-                    const msg = "Atanabilir kullanıcı listesi yüklenemedi.";
+                .catch((err) => {
+                    console.error("Kullanıcılar çekilirken hata:", err);
+                    const msg = extractApiError(err, "Kullanıcı listesi yüklenemedi.");
                     setError(msg);
                     toast.error(msg);
                 });
         } else {
-            // Modal kapandığında formu temizle
             clearForm();
         }
     }, [open]);
 
-    // Input (Plaka, Telefon) değişiklikleri için
     const handleChange = (e) => {
         const { name, value } = e.target;
-        const newValue = name === 'licensePlate' ? value.toUpperCase() : value;
-        setFormData(prev => ({ ...prev, [name]: newValue }));
+        const newValue = name === "licensePlate" ? value.toUpperCase() : value;
+        setFormData((prev) => ({ ...prev, [name]: newValue }));
     };
 
-    // Select (Kullanıcı) değişikliği için
     const handleSelectChange = (value) => {
-        setSelectedUserId(value);
+        // Select'te temizle/boş bırak için value undefined gelebilir
+        setSelectedUserId(value || "");
     };
 
     const clearForm = () => {
@@ -64,20 +68,18 @@ export function AddVehicleModal({ open, handleOpen, onVehicleAdded }) {
         setError("");
     };
 
-    const handleClose = () => {
-        handleOpen();
-    }
+    const handleClose = () => handleOpen();
 
     const handleSubmit = async () => {
-        if (!formData.licensePlate || !selectedUserId) {
-            const msg = "Plaka ve Kullanıcı alanları zorunludur.";
+        if (!formData.licensePlate?.trim()) {
+            const msg = "Plaka alanı zorunludur.";
             setError(msg);
             toast.error(msg);
             return;
         }
 
         if (!TURKISH_PLATE_REGEX.test(formData.licensePlate.trim())) {
-            const msg = "Plaka formatı uygun değil.";
+            const msg = "Plaka formatı uygun değil. Örn: 34 ABC 123";
             setError(msg);
             toast.error(msg);
             return;
@@ -85,19 +87,19 @@ export function AddVehicleModal({ open, handleOpen, onVehicleAdded }) {
 
         try {
             const payload = {
-                licensePlate: formData.licensePlate.trim().replace(/\s+/g, ''),
-                phoneNumber: formData.phoneNumber,
-                appUserId: selectedUserId
+                licensePlate: formData.licensePlate.trim().replace(/\s+/g, ""),
+                phoneNumber: formData.phoneNumber?.trim() || null,
+                appUserId: selectedUserId ? selectedUserId : null, // artık opsiyonel
             };
 
             await apiClient.post("/admin/vehicles", payload);
-            toast.success(`'${formData.licensePlate}' plakalı araç başarıyla eklendi!`, { position: "top-right" });
 
-            onVehicleAdded();
+            toast.success(`'${formData.licensePlate}' plakalı araç başarıyla eklendi!`);
+            onVehicleAdded?.();
             handleClose();
         } catch (err) {
-            console.error("Araç eklenirken hata:", err.response || err);
-            const apiError = err.response?.data?.message || err.response?.data?.error || "Araç eklenirken beklenmedik bir hata oluştu.";
+            console.error("Araç eklenirken hata:", err?.response || err);
+            const apiError = extractApiError(err, "Araç eklenirken hata oluştu.");
             setError(apiError);
             toast.error(apiError);
         }
@@ -107,7 +109,11 @@ export function AddVehicleModal({ open, handleOpen, onVehicleAdded }) {
         <Dialog open={open} handler={handleClose}>
             <DialogHeader>Yeni Araç Ekle</DialogHeader>
             <DialogBody divider className="flex flex-col gap-4">
-                {error && <Typography color="red" variant="small">{error}</Typography>}
+                {error && (
+                    <Typography color="red" variant="small">
+                        {error}
+                    </Typography>
+                )}
 
                 <Input
                     label="Plaka *"
@@ -116,23 +122,18 @@ export function AddVehicleModal({ open, handleOpen, onVehicleAdded }) {
                     onChange={handleChange}
                 />
 
-                {/* DÜZELTİLEN KISIM: 'selected' prop'u kaldırıldı */}
                 <Select
-                    label="Kullanıcı Seçiniz *"
+                    label="Kullanıcı Seçiniz (Opsiyonel)"
                     name="appUserId"
                     onChange={handleSelectChange}
                     value={selectedUserId}
                 >
-                    {users.length > 0 ? (
-                        users.map(user => (
-                            // String(user.id) ile veri tipi garantiye alındı
-                            <Option key={user.id} value={String(user.id)}>
-                                {user.fullName}
-                            </Option>
-                        ))
-                    ) : (
-                        <Option disabled>Atanabilir kullanıcı bulunamadı</Option>
-                    )}
+                    <Option value="">Atama Yapma</Option>
+                    {users.map((user) => (
+                        <Option key={user.id} value={String(user.id)}>
+                            {user.fullName}
+                        </Option>
+                    ))}
                 </Select>
 
                 <Input
@@ -142,9 +143,14 @@ export function AddVehicleModal({ open, handleOpen, onVehicleAdded }) {
                     onChange={handleChange}
                 />
             </DialogBody>
+
             <DialogFooter>
-                <Button variant="text" color="red" onClick={handleClose} className="mr-1"><span>İptal</span></Button>
-                <Button variant="gradient" color="green" onClick={handleSubmit}><span>Kaydet</span></Button>
+                <Button variant="text" color="red" onClick={handleClose} className="mr-1">
+                    <span>İptal</span>
+                </Button>
+                <Button variant="gradient" color="green" onClick={handleSubmit}>
+                    <span>Kaydet</span>
+                </Button>
             </DialogFooter>
         </Dialog>
     );
