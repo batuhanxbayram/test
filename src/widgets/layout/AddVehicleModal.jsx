@@ -17,10 +17,11 @@ const TURKISH_PLATE_REGEX = /^(\d{2})\s*([A-Z]{1,3})\s*(\d{1,4})$/;
 
 export function AddVehicleModal({ open, handleOpen, onVehicleAdded }) {
     const [users, setUsers] = useState([]);
-    const [selectedUserId, setSelectedUserId] = useState(""); // opsiyonel
+    const [selectedUserId, setSelectedUserId] = useState("");
     const [formData, setFormData] = useState({
         licensePlate: "",
         phoneNumber: "",
+        driverName: "", // Şemaya eklendi
     });
     const [error, setError] = useState("");
 
@@ -33,7 +34,6 @@ export function AddVehicleModal({ open, handleOpen, onVehicleAdded }) {
 
     useEffect(() => {
         if (open) {
-            // Artık tüm kullanıcılar gelebilir (multi-vehicle için)
             apiClient
                 .get("/Users/without-vehicle")
                 .then((response) => {
@@ -58,12 +58,11 @@ export function AddVehicleModal({ open, handleOpen, onVehicleAdded }) {
     };
 
     const handleSelectChange = (value) => {
-        // Select'te temizle/boş bırak için value undefined gelebilir
         setSelectedUserId(value || "");
     };
 
     const clearForm = () => {
-        setFormData({ licensePlate: "", phoneNumber: "" });
+        setFormData({ licensePlate: "", phoneNumber: "", driverName: "" }); // Formu sıfırlama güncellendi
         setSelectedUserId("");
         setError("");
     };
@@ -71,6 +70,7 @@ export function AddVehicleModal({ open, handleOpen, onVehicleAdded }) {
     const handleClose = () => handleOpen();
 
     const handleSubmit = async () => {
+        // Validasyonlar
         if (!formData.licensePlate?.trim()) {
             const msg = "Plaka alanı zorunludur.";
             setError(msg);
@@ -85,11 +85,20 @@ export function AddVehicleModal({ open, handleOpen, onVehicleAdded }) {
             return;
         }
 
+        if (!formData.driverName?.trim()) {
+            const msg = "Sürücü adı alanı zorunludur.";
+            setError(msg);
+            toast.error(msg);
+            return;
+        }
+
         try {
+            // Sunucunun beklediği Şema Yapısı
             const payload = {
-                licensePlate: formData.licensePlate.trim().replace(/\s+/g, ""),
+                appUserId: selectedUserId || null,
+                licensePlate: formData.licensePlate.trim().replace(/\s+/g, ""), // Boşlukları temizler
+                driverName: formData.driverName.trim(), // Yeni eklendi
                 phoneNumber: formData.phoneNumber?.trim() || null,
-                appUserId: selectedUserId ? selectedUserId : null, // artık opsiyonel
             };
 
             await apiClient.post("/admin/vehicles", payload);
@@ -110,7 +119,7 @@ export function AddVehicleModal({ open, handleOpen, onVehicleAdded }) {
             <DialogHeader>Yeni Araç Ekle</DialogHeader>
             <DialogBody divider className="flex flex-col gap-4">
                 {error && (
-                    <Typography color="red" variant="small">
+                    <Typography color="red" variant="small" className="font-medium">
                         {error}
                     </Typography>
                 )}
@@ -120,21 +129,15 @@ export function AddVehicleModal({ open, handleOpen, onVehicleAdded }) {
                     name="licensePlate"
                     value={formData.licensePlate}
                     onChange={handleChange}
+                    placeholder="34 ABC 123"
                 />
 
-                <Select
-                    label="Kullanıcı Seçiniz (Opsiyonel)"
-                    name="appUserId"
-                    onChange={handleSelectChange}
-                    value={selectedUserId}
-                >
-                    <Option value="">Atama Yapma</Option>
-                    {users.map((user) => (
-                        <Option key={user.id} value={String(user.id)}>
-                            {user.fullName}
-                        </Option>
-                    ))}
-                </Select>
+                <Input
+                    label="Sürücü Adı *"
+                    name="driverName"
+                    value={formData.driverName}
+                    onChange={handleChange}
+                />
 
                 <Input
                     label="Telefon Numarası (Opsiyonel)"
@@ -142,14 +145,27 @@ export function AddVehicleModal({ open, handleOpen, onVehicleAdded }) {
                     value={formData.phoneNumber}
                     onChange={handleChange}
                 />
+
+                <Select
+                    label="Kullanıcı Ataması (Opsiyonel)"
+                    value={selectedUserId}
+                    onChange={handleSelectChange}
+                >
+                    <Option value="">Atama Yapma</Option>
+                    {users.map((user) => (
+                        <Option key={user.id} value={user.id}>
+                            {user.fullName}
+                        </Option>
+                    ))}
+                </Select>
             </DialogBody>
 
             <DialogFooter>
                 <Button variant="text" color="red" onClick={handleClose} className="mr-1">
-                    <span>İptal</span>
+                    İptal
                 </Button>
                 <Button variant="gradient" color="green" onClick={handleSubmit}>
-                    <span>Kaydet</span>
+                    Kaydet
                 </Button>
             </DialogFooter>
         </Dialog>
