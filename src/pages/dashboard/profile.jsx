@@ -1,9 +1,16 @@
 import React, { useState, useEffect } from "react";
 import {
-    Card, CardHeader, CardBody, Typography, Button,
-    Dialog, DialogHeader, DialogBody, DialogFooter // 1. Dialog bileşenlerini ekle
+    Card,
+    CardHeader,
+    CardBody,
+    Typography,
+    Button,
+    Dialog,
+    DialogHeader,
+    DialogBody,
+    DialogFooter,
 } from "@material-tailwind/react";
-import { toast } from 'react-toastify';
+import { toast } from "react-toastify";
 import apiClient from "../../api/axiosConfig.js";
 import { AddUserModal } from "@/widgets/layout/AddUserModal";
 import { EditUserModal } from "@/widgets/layout/EditUserModal";
@@ -13,16 +20,13 @@ export function Profile() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // Modal State'leri
     const [openAddModal, setOpenAddModal] = useState(false);
     const [openEditModal, setOpenEditModal] = useState(false);
     const [currentUser, setCurrentUser] = useState(null);
 
-    // 2. SİLME İŞLEMİ İÇİN YENİ STATE'LER
     const [openDeleteModal, setOpenDeleteModal] = useState(false);
-    const [userToDelete, setUserToDelete] = useState(null); // Silinecek kullanıcıyı tutar
+    const [userToDelete, setUserToDelete] = useState(null);
 
-    // --- Modal Aç/Kapa Fonksiyonları ---
     const handleOpenAddModal = () => setOpenAddModal(true);
     const handleCloseAddModal = () => setOpenAddModal(false);
 
@@ -30,12 +34,12 @@ export function Profile() {
         setCurrentUser(user);
         setOpenEditModal(true);
     };
+
     const handleCloseEditModal = () => {
         setCurrentUser(null);
         setOpenEditModal(false);
     };
 
-    // 3. SİLME MODALINI AÇAN FONKSİYON
     const handleOpenDeleteModal = (user) => {
         setUserToDelete(user);
         setOpenDeleteModal(true);
@@ -46,15 +50,34 @@ export function Profile() {
         setOpenDeleteModal(false);
     };
 
+    const extractApiError = (err, fallback) => {
+        const data = err?.response?.data;
+        if (!data) return fallback;
+
+        if (typeof data === "string") return data;
+        if (data?.title) return data.title;
+        if (data?.message) return data.message;
+
+        // ValidationProblemDetails vb.
+        if (data?.errors && typeof data.errors === "object") {
+            const firstKey = Object.keys(data.errors)[0];
+            if (firstKey && Array.isArray(data.errors[firstKey]) && data.errors[firstKey][0]) {
+                return data.errors[firstKey][0];
+            }
+        }
+
+        return fallback;
+    };
+
     const fetchUsers = async () => {
         try {
             setLoading(true);
             const response = await apiClient.get("/Users");
-            setUsers(response.data);
+            setUsers(response.data || []);
             setError(null);
         } catch (err) {
-            setError("Kullanıcı verileri yüklenirken bir hata oluştu.");
-            console.error(err);
+            console.error("Kullanıcı listesi hatası:", err);
+            setError(extractApiError(err, "Kullanıcı verileri yüklenirken bir hata oluştu."));
         } finally {
             setLoading(false);
         }
@@ -64,33 +87,48 @@ export function Profile() {
         fetchUsers();
     }, []);
 
-    const handleDataChange = (message) => {
-        fetchUsers();
-        if(message) {
-            toast.success(message);
-        }
+    const handleDataChange = async (message) => {
+        await fetchUsers();
+        if (message) toast.success(message);
     };
 
-    const onUserAddedCallback = () => handleDataChange("Kullanıcı başarıyla eklendi.");
-    const onUserUpdatedCallback = () => handleDataChange("Kullanıcı bilgileri güncellendi.");
+    const onUserAddedCallback = async () => {
+        await handleDataChange("Kullanıcı başarıyla eklendi.");
+    };
 
-    // 4. ASIL SİLME İŞLEMİNİ YAPAN FONKSİYON
+    const onUserUpdatedCallback = async () => {
+        await handleDataChange("Kullanıcı bilgileri güncellendi.");
+    };
+
     const confirmDelete = async () => {
         if (!userToDelete) return;
 
         try {
             await apiClient.delete(`/Users/${userToDelete.id}`);
-            handleDataChange(`'${userToDelete.fullName}' adlı kullanıcı silindi.`);
-            handleCloseDeleteModal(); // Modalı kapat
+            await handleDataChange(`'${userToDelete.fullName}' adlı kullanıcı silindi.`);
+            handleCloseDeleteModal();
         } catch (err) {
             console.error("Silme hatası:", err);
-            toast.error("Silme işlemi başarısız oldu.");
-            handleCloseDeleteModal(); // Hata olsa da modalı kapat
+            toast.error(extractApiError(err, "Silme işlemi başarısız oldu."));
+            handleCloseDeleteModal();
         }
     };
 
-    if (loading) return <div className="mt-12 text-center"><Typography>Kullanıcılar Yükleniyor...</Typography></div>;
-    if (error) return <div className="mt-12 text-center"><Typography color="red">{error}</Typography></div>;
+    if (loading) {
+        return (
+            <div className="mt-12 text-center">
+                <Typography>Kullanıcılar Yükleniyor...</Typography>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="mt-12 text-center">
+                <Typography color="red">{error}</Typography>
+            </div>
+        );
+    }
 
     return (
         <>
@@ -98,6 +136,7 @@ export function Profile() {
                 open={openAddModal}
                 handleOpen={handleCloseAddModal}
                 onUserAdded={onUserAddedCallback}
+                requireFullName={true} // backend artık FullName istiyor
             />
 
             <EditUserModal
@@ -107,25 +146,19 @@ export function Profile() {
                 onUserUpdated={onUserUpdatedCallback}
             />
 
-            {/* 5. SİLME ONAY MODALI (Dialog) */}
             <Dialog open={openDeleteModal} handler={handleCloseDeleteModal} size="xs">
                 <DialogHeader>Silme Onayı</DialogHeader>
                 <DialogBody divider>
                     {userToDelete && (
                         <Typography>
                             <span className="font-bold">{userToDelete.fullName}</span> adlı kullanıcıyı silmek istediğinizden emin misiniz?
-                            <br/><br/>
-
+                            <br />
+                            <br />
                         </Typography>
                     )}
                 </DialogBody>
                 <DialogFooter>
-                    <Button
-                        variant="text"
-                        color="blue-gray"
-                        onClick={handleCloseDeleteModal}
-                        className="mr-1"
-                    >
+                    <Button variant="text" color="blue-gray" onClick={handleCloseDeleteModal} className="mr-1">
                         İptal
                     </Button>
                     <Button variant="gradient" color="red" onClick={confirmDelete}>
@@ -137,7 +170,9 @@ export function Profile() {
             <div className="mt-12 mb-8 flex flex-col gap-12">
                 <Card>
                     <CardHeader variant="gradient" color="gray" className="mb-4 p-6 flex justify-between items-center">
-                        <Typography variant="h6" color="white">Kullanıcılar</Typography>
+                        <Typography variant="h6" color="white">
+                            Kullanıcılar
+                        </Typography>
                         <Button size="sm" className="bg-green-700 text-white hover:bg-green-800" onClick={handleOpenAddModal}>
                             Kullanıcı Ekle
                         </Button>
@@ -147,8 +182,13 @@ export function Profile() {
                             <thead>
                             <tr>
                                 {["Tam Ad", "Plaka", "Telefon", "İşlem"].map((el) => (
-                                    <th key={el} className={`border-b border-blue-gray-50 py-3 px-5 text-left ${el === "İşlem" ? "text-right" : ""}`}>
-                                        <Typography variant="small" className="font-bold uppercase text-blue-gray-400">{el}</Typography>
+                                    <th
+                                        key={el}
+                                        className={`border-b border-blue-gray-50 py-3 px-5 text-left ${el === "İşlem" ? "text-right" : ""}`}
+                                    >
+                                        <Typography variant="small" className="font-bold uppercase text-blue-gray-400">
+                                            {el}
+                                        </Typography>
                                     </th>
                                 ))}
                             </tr>
@@ -180,7 +220,6 @@ export function Profile() {
                                             >
                                                 Düzenle
                                             </Typography>
-
 
                                             <Typography
                                                 as="a"
