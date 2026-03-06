@@ -82,7 +82,7 @@ export function SignIn() {
             </div>
             <div>
               <Typography variant="small" color="blue-gray" className="mb-2 font-medium">
-                Şifree
+                Şifre
               </Typography>
               <Input
                   type="password"

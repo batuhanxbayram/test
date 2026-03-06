@@ -105,10 +105,12 @@ export function Home() {
 
             {/* --- MOBİL İÇİN SEKME MENÜSÜ --- */}
             {isMobile && routesWithQueues.length > 0 && (
-                <div className="mb-6 overflow-x-auto pb-2">
-                    <Tabs value={activeTab} className="w-full">
+                // 1. DÜZENLEME: Alanı yatayda kaydırılabilir (overflow-x-auto) yapıyoruz. iOS cihazlarda akıcı kaydırma için ek stiller koyduk.
+                <div className="mb-6 w-full overflow-x-auto pb-2 scroll-smooth" style={{ WebkitOverflowScrolling: "touch" }}>
+                    {/* 2. DÜZENLEME: Tabs genişliğini min-w-full ve w-max yaparak ekrana sıkışmasını engelledik. */}
+                    <Tabs value={activeTab} className="w-max min-w-full">
                         <TabsHeader
-                            className="bg-transparent"
+                            className="bg-transparent flex-nowrap gap-2" // gap-2 ile butonlar arasına hafif boşluk koyduk
                             indicatorProps={{
                                 className: "bg-gray-900/10 shadow-none !text-gray-900",
                             }}
@@ -118,7 +120,8 @@ export function Home() {
                                     key={routeId}
                                     value={routeId}
                                     onClick={() => setActiveTab(routeId)}
-                                    className={activeTab === routeId ? "font-bold text-gray-900" : ""}
+                                    // 3. DÜZENLEME: whitespace-nowrap yazının alt satıra düşmesini engeller, shrink-0 sekmenin daralmasını engeller.
+                                    className={`w-max whitespace-nowrap px-5 py-2 shrink-0 ${activeTab === routeId ? "font-bold text-gray-900" : ""}`}
                                 >
                                     {routeName}
                                 </Tab>

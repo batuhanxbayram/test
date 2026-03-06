@@ -10,9 +10,6 @@ const TVQueuePage = () => {
 
   const connectionRef = useRef(null);
 
-  // 🟢 KRİTİK GÜNCELLEME:
-  // Siteniz artık SSL (HTTPS) olduğu için burası domain adresi olmalı.
-  // IP adresi (http) kalırsa "Mixed Content" hatası verir ve bağlanmaz.
   const HUB_URL = "https://75ymkt.com/hubs/queue";
 
   // --- PLAKA FORMATLAYICI ---
@@ -101,9 +98,9 @@ const TVQueuePage = () => {
   }, []);
 
   useEffect(() => {
-    if (data.length > 3) {
+    if (data.length > 2) {
       const slideTimer = setInterval(() => {
-        setCurrentIndex((prevIndex) => (prevIndex + 3) % data.length);
+        setCurrentIndex((prevIndex) => (prevIndex + 2) % data.length);
       }, 60000);
       return () => clearInterval(slideTimer);
     } else {
@@ -113,11 +110,10 @@ const TVQueuePage = () => {
 
   const getVisibleRoutes = () => {
     if (data.length === 0) return [];
-    if (data.length <= 3) return data;
+    if (data.length <= 2) return data;
     return [
       data[currentIndex % data.length],
-      data[(currentIndex + 1) % data.length],
-      data[(currentIndex + 2) % data.length]
+      data[(currentIndex + 1) % data.length]
     ];
   };
 
@@ -126,65 +122,67 @@ const TVQueuePage = () => {
   if (loading && data.length === 0) {
     return (
         <div className="h-screen w-screen bg-[#F1F5F9] flex items-center justify-center">
-          <span className="text-slate-400 font-bold animate-pulse">SİSTEM YÜKLENİYOR...</span>
+          <span className="text-slate-400 font-bold animate-pulse text-xl">SİSTEM YÜKLENİYOR...</span>
         </div>
     );
   }
 
   return (
-      <div className="h-screen w-screen bg-[#E2E8F0] text-[#334155] overflow-hidden flex flex-col p-2 font-sans">
-        <div className="flex justify-between items-center px-6 py-2 bg-[#475569] rounded-xl mb-2 shadow-md shrink-0 border-b-2 border-[#334155]">
+      <div className="h-screen w-screen bg-[#E2E8F0] text-[#334155] overflow-hidden flex flex-col p-3 font-sans">
+        <div className="flex justify-between items-center px-6 py-3 bg-[#475569] rounded-xl mb-3 shadow-md shrink-0 border-b-2 border-[#334155]">
           <div className="flex items-center gap-4">
-            <div className="bg-[#64748B] text-white w-9 h-9 flex items-center justify-center rounded-lg font-black text-lg shadow-inner border border-white/10">
+            <div className="bg-[#64748B] text-white w-12 h-12 flex items-center justify-center rounded-lg font-black text-2xl shadow-inner border border-white/10">
               75
             </div>
-            <h1 className="text-sm font-black tracking-widest text-white uppercase antialiased">ARAÇ TAKİP SİSTEMİ</h1>
+            <h1 className="text-lg font-black tracking-widest text-white uppercase antialiased">ARAÇ TAKİP SİSTEMİ</h1>
           </div>
 
           <div className="flex items-center gap-6 text-white text-right">
             <div className="flex flex-col leading-none">
-              <span className="text-[16px] font-mono font-black tracking-tighter">{time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
-              <span className="text-[9px] font-bold text-[#BDB2A7] mt-1 uppercase tracking-widest">
+              <span className="text-xl font-mono font-black tracking-tighter">{time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+              <span className="text-xs font-bold text-[#BDB2A7] mt-1 uppercase tracking-widest">
                {time.toLocaleDateString('tr-TR', { day: '2-digit', month: 'long', year: 'numeric' })}
              </span>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-3 flex-grow overflow-hidden">
+        <div className="grid grid-cols-2 gap-5 flex-grow overflow-hidden">
           {currentRoutes.map((route, idx) => (
               <div key={`${currentIndex}-${idx}`} className="flex flex-col bg-white rounded-2xl shadow-xl border border-slate-300 overflow-hidden h-full">
 
-                <div className="bg-slate-50 p-3 shrink-0 flex justify-between items-center border-b border-slate-200 shadow-sm">
-                  <div className="flex items-center gap-2">
-                    <div className="bg-[#00BFA5] w-2 h-4 rounded-full"></div>
-                    <h2 className="text-sm font-extrabold text-[#1E293B] uppercase tracking-tight antialiased">
+                <div className="bg-slate-50 p-4 shrink-0 flex justify-between items-center border-b border-slate-200 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-[#00BFA5] w-2.5 h-6 rounded-full"></div>
+                    <h2 className="text-xl font-extrabold text-[#1E293B] uppercase tracking-tight antialiased">
                       {route.routeName}
                     </h2>
                   </div>
-                  <span className="text-[10px] font-black bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-md border border-indigo-100 uppercase">
+                  <span className="text-xs font-black bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-md border border-indigo-100 uppercase tracking-wide">
                 {route.vehicles.length} ARAÇ
               </span>
                 </div>
 
-                <div className="p-2 grid grid-cols-3 gap-x-2 h-full overflow-hidden bg-[#FDFCFB]">
-                  {[0, 1, 2].map((colIndex) => (
-                      <div key={colIndex} className="flex flex-col h-full space-y-0.5">
-                        {Array.from({ length: 34 }).map((_, rowIndex) => {
-                          const vehicleIndex = colIndex * 34 + rowIndex;
+                {/* 🟢 KRİTİK DEĞİŞİKLİK: 3 Sütun yerine 4 Sütun (grid-cols-4) yaptık */}
+                <div className="p-2 grid grid-cols-4 gap-x-2 h-full overflow-hidden bg-[#FDFCFB]">
+                  {[0, 1, 2, 3].map((colIndex) => (
+                      <div key={colIndex} className="flex flex-col h-full">
+                        {/* 🟢 34 Satır yerine 25 Satır dönecek (4x25 = 100 araç) */}
+                        {Array.from({ length: 25 }).map((_, rowIndex) => {
+                          const vehicleIndex = colIndex * 25 + rowIndex;
                           const vehicle = route.vehicles && route.vehicles[vehicleIndex];
                           if (vehicleIndex >= 100) return null;
 
                           return (
                               <div
                                   key={vehicleIndex}
-                                  className={`flex items-center gap-2 px-2 transition-all duration-300 ${vehicle ? "bg-[#F1F5F9] rounded border border-slate-200/60 shadow-[0_1px_2px_rgba(0,0,0,0.05)]" : "border-b border-transparent"}`}
-                                  style={{ height: 'calc(100% / 34.5)' }}
+                                  // flex-1: Tüm dikey alanı eşit bölüştürür, taşmayı 100% engeller
+                                  className={`flex-1 flex items-center gap-1.5 px-2 transition-all duration-300 ${vehicle ? "bg-[#F1F5F9] rounded border border-slate-200/60 shadow-[0_1px_2px_rgba(0,0,0,0.05)]" : "border-b border-transparent"}`}
                               >
-                                <span className="text-[9px] font-black text-slate-400 w-4 text-right shrink-0 font-mono tracking-tighter">
+                                <span className="text-[12px] font-black text-slate-400 w-5 text-right shrink-0 font-mono tracking-tighter">
                                   {String(vehicleIndex + 1).padStart(2, '0')}
                                 </span>
-                                <span className={`font-mono text-[13px] truncate leading-none antialiased ${vehicle ? "font-black text-[#1E293B] tracking-wider uppercase drop-shadow-sm" : "invisible"}`}>
+                                <span className={`font-mono text-[14px] truncate leading-none antialiased ${vehicle ? "font-black text-[#1E293B] tracking-widest uppercase drop-shadow-sm" : "invisible"}`}>
                                   {vehicle ? formatLicensePlate(vehicle.plate) : ""}
                                 </span>
                               </div>

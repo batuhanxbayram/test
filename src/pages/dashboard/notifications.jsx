@@ -60,12 +60,10 @@ export function Notifications() {
     }
   };
   
-  // ------------------------------------
-  // YENİ TOAST SİLME İŞLEMLERİ
-  // ------------------------------------
+
 
   const handleDeleteToast = (routeId, routeName) => {
-    // window.confirm yerine Toast Onayı kullanıyoruz
+
     toast.warn(
       <div className="flex flex-col">
         <p className="text-sm font-bold">
