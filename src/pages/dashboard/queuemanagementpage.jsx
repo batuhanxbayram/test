@@ -21,8 +21,8 @@ export function QueueManagementPage() {
     const [vehicleToAdd, setVehicleToAdd] = useState("");
     const [loadingQueue, setLoadingQueue] = useState(false);
 
-    // IP Adresine dikkat (https/http ve port)
-    const HUB_URL = "https://localhost:7093/hubs/queue";
+
+    const HUB_URL = "https://75ymkt.com/hubs/queue";
 
     const fetchBaseData = async () => {
         try {
