@@ -11,22 +11,23 @@ export function MyProfile() {
     const [userInfo, setUserInfo] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    // Şifre değiştirme formu
     const [passwords, setPasswords] = useState({
+        currentPassword: "",
         password: "",
         confirmPassword: "",
     });
     const [saving, setSaving] = useState(false);
 
-    // Token'dan userId al
     const getUserIdFromToken = () => {
         const token = localStorage.getItem("authToken");
         if (!token) return null;
         try {
             const decoded = jwtDecode(token);
-            return decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"]
+            return (
+                decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"]
                 || decoded.sub
-                || decoded.nameid;
+                || decoded.nameid
+            );
         } catch {
             return null;
         }
@@ -39,7 +40,7 @@ export function MyProfile() {
             const res = await apiClient.get("/Users");
             const me = res.data.find(u => u.id === userId);
             setUserInfo(me || null);
-        } catch (e) {
+        } catch {
             toast.error("Bilgiler yüklenemedi.");
         } finally {
             setLoading(false);
@@ -51,12 +52,12 @@ export function MyProfile() {
     }, []);
 
     const handlePasswordChange = async () => {
-        if (!passwords.password || !passwords.confirmPassword) {
+        if (!passwords.currentPassword || !passwords.password || !passwords.confirmPassword) {
             toast.error("Lütfen tüm şifre alanlarını doldurun.");
             return;
         }
         if (passwords.password !== passwords.confirmPassword) {
-            toast.error("Şifreler eşleşmiyor.");
+            toast.error("Yeni şifreler eşleşmiyor.");
             return;
         }
         if (passwords.password.length < 6) {
@@ -64,18 +65,15 @@ export function MyProfile() {
             return;
         }
 
-        const userId = getUserIdFromToken();
-        if (!userId) return;
-
         setSaving(true);
         try {
-            await apiClient.put(`/Users/${userId}`, {
-                fullName: userInfo.fullName,
-                password: passwords.password,
-                confirmPassword: passwords.confirmPassword,
+            await apiClient.post("/Users/change-my-password", {
+                currentPassword: passwords.currentPassword,
+                newPassword: passwords.password,
+                confirmNewPassword: passwords.confirmPassword,
             });
             toast.success("Şifre başarıyla güncellendi!");
-            setPasswords({ password: "", confirmPassword: "" });
+            setPasswords({ currentPassword: "", password: "", confirmPassword: "" });
         } catch (e) {
             toast.error(e.response?.data?.message || "Şifre güncellenemedi.");
         } finally {
@@ -102,16 +100,16 @@ export function MyProfile() {
     return (
         <div className="mt-12 mb-8 flex flex-col gap-8 max-w-2xl mx-auto">
 
-            {/* Kişisel Bilgiler Kartı */}
+            {/* Kişisel Bilgiler */}
             <Card>
                 <CardHeader variant="gradient" color="gray" className="mb-4 p-6 flex items-center gap-4">
                     <UserCircleIcon className="h-8 w-8 text-white opacity-80" />
                     <Typography variant="h6" color="white">Kişisel Bilgilerim</Typography>
                 </CardHeader>
-                <CardBody className="flex flex-col gap-5 px-6 pb-6">
+                <CardBody className="flex flex-col gap-6 px-6 pb-6">
 
                     <div className="flex flex-col gap-1">
-                        <Typography variant="small" className="font-semibold text-blue-gray-500 uppercase text-xs">
+                        <Typography variant="small" className="font-semibold text-blue-gray-400 uppercase text-xs tracking-wide">
                             Ad Soyad
                         </Typography>
                         <Typography variant="h6" className="text-blue-gray-800">
@@ -120,7 +118,7 @@ export function MyProfile() {
                     </div>
 
                     <div className="flex flex-col gap-1">
-                        <Typography variant="small" className="font-semibold text-blue-gray-500 uppercase text-xs">
+                        <Typography variant="small" className="font-semibold text-blue-gray-400 uppercase text-xs tracking-wide">
                             Kullanıcı Adı
                         </Typography>
                         <Typography className="text-blue-gray-700">
@@ -129,7 +127,7 @@ export function MyProfile() {
                     </div>
 
                     <div className="flex flex-col gap-1">
-                        <Typography variant="small" className="font-semibold text-blue-gray-500 uppercase text-xs">
+                        <Typography variant="small" className="font-semibold text-blue-gray-400 uppercase text-xs tracking-wide">
                             Telefon Numarası
                         </Typography>
                         <Typography className="text-blue-gray-700">
@@ -138,7 +136,7 @@ export function MyProfile() {
                     </div>
 
                     <div className="flex flex-col gap-1">
-                        <Typography variant="small" className="font-semibold text-blue-gray-500 uppercase text-xs">
+                        <Typography variant="small" className="font-semibold text-blue-gray-400 uppercase text-xs tracking-wide">
                             Araç Plakası
                         </Typography>
                         {userInfo.licensePlate && userInfo.licensePlate !== "-" ? (
@@ -158,13 +156,20 @@ export function MyProfile() {
                 </CardBody>
             </Card>
 
-            {/* Şifre Değiştir Kartı */}
+            {/* Şifre Değiştir */}
             <Card>
                 <CardHeader variant="gradient" color="gray" className="mb-4 p-6">
                     <Typography variant="h6" color="white">Şifre Değiştir</Typography>
                 </CardHeader>
                 <CardBody className="flex flex-col gap-5 px-6 pb-6">
 
+                    <Input
+                        label="Mevcut Şifre"
+                        type="password"
+                        value={passwords.currentPassword}
+                        onChange={e => setPasswords(p => ({ ...p, currentPassword: e.target.value }))}
+                        autoComplete="current-password"
+                    />
                     <Input
                         label="Yeni Şifre"
                         type="password"
