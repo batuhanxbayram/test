@@ -2,12 +2,23 @@ import React, { useState, useEffect } from "react";
 import {
     Card, CardHeader, CardBody, Typography, Button, Input, Chip
 } from "@material-tailwind/react";
-import { UserCircleIcon } from "@heroicons/react/24/solid";
+import { UserCircleIcon, TruckIcon } from "@heroicons/react/24/solid";
 import { toast } from "react-toastify";
+import { HubConnectionBuilder, LogLevel } from "@microsoft/signalr";
 import apiClient from "../../api/axiosConfig.js";
+
+const HUB_URL = "https://75ymkt.com/hubs/queue";
+
+const formatPlate = (plate) => {
+    if (!plate) return "";
+    const clean = plate.replace(/\s/g, "").toUpperCase();
+    const match = clean.match(/^(\d{2})([A-Z]+)(\d+)$/);
+    return match ? `${match[1]} ${match[2]} ${match[3]}` : clean;
+};
 
 export function MyProfile() {
     const [userInfo, setUserInfo] = useState(null);
+    const [queueStatus, setQueueStatus] = useState([]); // [{routeName, position, total}]
     const [loading, setLoading] = useState(true);
     const [passwords, setPasswords] = useState({
         currentPassword: "",
@@ -27,9 +38,55 @@ export function MyProfile() {
         }
     };
 
+    const fetchQueueStatus = async (licensePlate) => {
+        if (!licensePlate || licensePlate === "-") return;
+        try {
+            const res = await apiClient.get("/queues/all");
+            const cleanMyPlate = licensePlate.replace(/\s/g, "").toUpperCase();
+
+            const statuses = [];
+            for (const route of res.data) {
+                const idx = route.queuedVehicles.findIndex(
+                    v => v.licensePlate.replace(/\s/g, "").toUpperCase() === cleanMyPlate
+                );
+                if (idx !== -1) {
+                    statuses.push({
+                        routeName: route.routeName,
+                        position: idx + 1,
+                        total: route.queuedVehicles.length,
+                    });
+                }
+            }
+            setQueueStatus(statuses);
+        } catch {
+            // Sessizce geç
+        }
+    };
+
     useEffect(() => {
         fetchMyInfo();
     }, []);
+
+    useEffect(() => {
+        if (!userInfo?.licensePlate) return;
+
+        fetchQueueStatus(userInfo.licensePlate);
+
+        // SignalR — sıra değişince otomatik güncelle
+        const connection = new HubConnectionBuilder()
+            .withUrl(HUB_URL)
+            .withAutomaticReconnect()
+            .configureLogging(LogLevel.None)
+            .build();
+
+        connection.start().then(() => {
+            connection.on("ReceiveQueueUpdate", () => {
+                fetchQueueStatus(userInfo.licensePlate);
+            });
+        }).catch(() => {});
+
+        return () => connection.stop();
+    }, [userInfo]);
 
     const handlePasswordChange = async () => {
         if (!passwords.currentPassword || !passwords.password || !passwords.confirmPassword) {
@@ -44,7 +101,6 @@ export function MyProfile() {
             toast.error("Şifre en az 6 karakter olmalıdır.");
             return;
         }
-
         setSaving(true);
         try {
             await apiClient.post("/Users/change-my-password", {
@@ -87,7 +143,6 @@ export function MyProfile() {
                     <Typography variant="h6" color="white">Kişisel Bilgilerim</Typography>
                 </CardHeader>
                 <CardBody className="flex flex-col gap-6 px-6 pb-6">
-
                     <div className="flex flex-col gap-1">
                         <Typography variant="small" className="font-semibold text-blue-gray-400 uppercase text-xs tracking-wide">
                             Ad Soyad
@@ -96,7 +151,6 @@ export function MyProfile() {
                             {userInfo.fullName || "-"}
                         </Typography>
                     </div>
-
                     <div className="flex flex-col gap-1">
                         <Typography variant="small" className="font-semibold text-blue-gray-400 uppercase text-xs tracking-wide">
                             Kullanıcı Adı
@@ -105,7 +159,6 @@ export function MyProfile() {
                             {userInfo.userName || "-"}
                         </Typography>
                     </div>
-
                     <div className="flex flex-col gap-1">
                         <Typography variant="small" className="font-semibold text-blue-gray-400 uppercase text-xs tracking-wide">
                             Telefon Numarası
@@ -114,7 +167,6 @@ export function MyProfile() {
                             {userInfo.phoneNumber || "-"}
                         </Typography>
                     </div>
-
                     <div className="flex flex-col gap-1">
                         <Typography variant="small" className="font-semibold text-blue-gray-400 uppercase text-xs tracking-wide">
                             Araç Plakası
@@ -123,7 +175,7 @@ export function MyProfile() {
                             <Chip
                                 variant="ghost"
                                 color="blue"
-                                value={userInfo.licensePlate}
+                                value={formatPlate(userInfo.licensePlate)}
                                 className="w-max font-bold text-sm"
                             />
                         ) : (
@@ -132,7 +184,74 @@ export function MyProfile() {
                             </Typography>
                         )}
                     </div>
+                </CardBody>
+            </Card>
 
+            {/* Sıra Durumu */}
+            <Card>
+                <CardHeader variant="gradient" color="gray" className="mb-4 p-6 flex items-center gap-4">
+                    <TruckIcon className="h-8 w-8 text-white opacity-80" />
+                    <div>
+                        <Typography variant="h6" color="white">Sıra Durumum</Typography>
+                        <Typography variant="small" color="white" className="opacity-70 font-normal">
+                            Gerçek zamanlı güncellenir
+                        </Typography>
+                    </div>
+                </CardHeader>
+                <CardBody className="px-6 pb-6">
+                    {!userInfo.licensePlate || userInfo.licensePlate === "-" ? (
+                        <Typography className="text-blue-gray-400 italic text-sm text-center py-4">
+                            Atanmış araç olmadığı için sıra durumu görüntülenemiyor.
+                        </Typography>
+                    ) : queueStatus.length === 0 ? (
+                        <Typography className="text-blue-gray-400 italic text-sm text-center py-4">
+                            Şu an hiçbir güzergah sırasında değilsiniz.
+                        </Typography>
+                    ) : (
+                        <table className="w-full table-auto">
+                            <thead>
+                            <tr>
+                                {["Güzergah", "Sıra No", "Toplam Araç", "Durum"].map(h => (
+                                    <th key={h} className="border-b border-blue-gray-50 py-3 px-4 text-left">
+                                        <Typography variant="small" className="font-bold uppercase text-blue-gray-400 text-xs">
+                                            {h}
+                                        </Typography>
+                                    </th>
+                                ))}
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {queueStatus.map((s, i) => (
+                                <tr key={i} className="hover:bg-blue-gray-50/50 transition-colors">
+                                    <td className="py-3 px-4 border-b border-blue-gray-50">
+                                        <Typography className="text-sm font-semibold text-blue-gray-700">
+                                            {s.routeName}
+                                        </Typography>
+                                    </td>
+                                    <td className="py-3 px-4 border-b border-blue-gray-50">
+                                        <Typography className="text-2xl font-bold text-gray-800">
+                                            {s.position}
+                                        </Typography>
+                                    </td>
+                                    <td className="py-3 px-4 border-b border-blue-gray-50">
+                                        <Typography className="text-sm text-blue-gray-500">
+                                            {s.total} araç
+                                        </Typography>
+                                    </td>
+                                    <td className="py-3 px-4 border-b border-blue-gray-50">
+                                        {s.position === 1 ? (
+                                            <Chip variant="gradient" color="green" value="Sıradaki" className="w-max text-xs" />
+                                        ) : s.position <= 3 ? (
+                                            <Chip variant="gradient" color="amber" value="Yaklaşıyor" className="w-max text-xs" />
+                                        ) : (
+                                            <Chip variant="ghost" color="blue-gray" value="Bekliyor" className="w-max text-xs" />
+                                        )}
+                                    </td>
+                                </tr>
+                            ))}
+                            </tbody>
+                        </table>
+                    )}
                 </CardBody>
             </Card>
 
@@ -142,7 +261,6 @@ export function MyProfile() {
                     <Typography variant="h6" color="white">Şifre Değiştir</Typography>
                 </CardHeader>
                 <CardBody className="flex flex-col gap-5 px-6 pb-6">
-
                     <Input
                         label="Mevcut Şifre"
                         type="password"
@@ -164,7 +282,6 @@ export function MyProfile() {
                         onChange={e => setPasswords(p => ({ ...p, confirmPassword: e.target.value }))}
                         autoComplete="new-password"
                     />
-
                     <Button
                         variant="gradient"
                         color="gray"
@@ -174,7 +291,6 @@ export function MyProfile() {
                     >
                         {saving ? "Kaydediliyor..." : "Şifreyi Güncelle"}
                     </Button>
-
                 </CardBody>
             </Card>
 
