@@ -15,7 +15,7 @@ import {
   Tables,
   Notifications,
   QueueManagementPage,
-  DispatchPage,
+  DispatchPage, MyProfile,
 } from "@/pages/dashboard";
 
 import { SignIn } from "@/pages/auth";
@@ -70,6 +70,14 @@ export const routes = [
         element: <Notifications />,
         roles: ['admin'],
       },
+      {
+        icon: <UserCircleIcon {...icon} />,
+        name: "Profilim",
+        path: "/profilim",
+        element: <MyProfile/>,
+        roles: ["user"],
+      },
+
     ],
   },
   {
