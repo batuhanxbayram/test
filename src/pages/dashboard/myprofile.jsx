@@ -3,14 +3,12 @@ import {
     Card, CardHeader, CardBody, Typography, Button, Input, Chip
 } from "@material-tailwind/react";
 import { UserCircleIcon } from "@heroicons/react/24/solid";
-import { jwtDecode } from "jwt-decode";
 import { toast } from "react-toastify";
 import apiClient from "../../api/axiosConfig.js";
 
 export function MyProfile() {
     const [userInfo, setUserInfo] = useState(null);
     const [loading, setLoading] = useState(true);
-
     const [passwords, setPasswords] = useState({
         currentPassword: "",
         password: "",
@@ -18,28 +16,10 @@ export function MyProfile() {
     });
     const [saving, setSaving] = useState(false);
 
-    const getUserIdFromToken = () => {
-        const token = localStorage.getItem("authToken");
-        if (!token) return null;
-        try {
-            const decoded = jwtDecode(token);
-            return (
-                decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"]
-                || decoded.sub
-                || decoded.nameid
-            );
-        } catch {
-            return null;
-        }
-    };
-
     const fetchMyInfo = async () => {
-        const userId = getUserIdFromToken();
-        if (!userId) return;
         try {
-            const res = await apiClient.get("/Users");
-            const me = res.data.find(u => u.id === userId);
-            setUserInfo(me || null);
+            const res = await apiClient.get("/Users/me");
+            setUserInfo(res.data);
         } catch {
             toast.error("Bilgiler yüklenemedi.");
         } finally {
