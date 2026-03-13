@@ -11,9 +11,10 @@ import "react-toastify/dist/ReactToastify.css";
 import apiClient from "../../api/axiosConfig.js";
 import { AddVehicleModal } from "@/widgets/layout/AddVehicleModal";
 import { EditVehicleModal } from "@/widgets/layout/EditVehicleModal";
+import { AssignUserModal } from "@/widgets/layout/AssignUserModal";
 
 const toTitleCase = (str) =>
-    !str ? "" : str.toLowerCase().split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+    !str ? "-" : str.toLowerCase().split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
 
 export function Tables() {
   const [vehicles, setVehicles] = useState([]);
@@ -24,15 +25,13 @@ export function Tables() {
 
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [currentVehicle, setCurrentVehicle] = useState(null);
+  const handleOpenEditModal = (vehicle) => { setCurrentVehicle(vehicle); setEditModalOpen(true); };
+  const handleCloseEditModal = () => { setEditModalOpen(false); setCurrentVehicle(null); };
 
-  const handleOpenEditModal = (vehicle) => {
-    setCurrentVehicle(vehicle);
-    setEditModalOpen(true);
-  };
-  const handleCloseEditModal = () => {
-    setEditModalOpen(false);
-    setCurrentVehicle(null);
-  };
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [vehicleToAssign, setVehicleToAssign] = useState(null);
+  const handleOpenAssignModal = (vehicle) => { setVehicleToAssign(vehicle); setAssignModalOpen(true); };
+  const handleCloseAssignModal = () => { setAssignModalOpen(false); setVehicleToAssign(null); };
 
   const fetchVehicles = async () => {
     try {
@@ -80,6 +79,19 @@ export function Tables() {
     toast.success("Uyarı listeden kaldırıldı.", { autoClose: 1000 });
   };
 
+  const unassignUser = async (vehicle) => {
+    if (!vehicle.appUserId) {
+      toast.info("Bu araçta zaten atanmış kullanıcı yok.");
+      return;
+    }
+    try {
+      await apiClient.patch(`/admin/vehicles/${vehicle.id}/assign-user`, { appUserId: null });
+      handleDataChange(`${vehicle.licensePlate} aracından kullanıcı ataması kaldırıldı.`);
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Atama kaldırılamadı.");
+    }
+  };
+
   const handleDeleteToast = (id, plaka) => {
     toast.warn(
         <div className="flex flex-col">
@@ -103,50 +115,52 @@ export function Tables() {
     }
   };
 
-  // NEW: Atamayı kaldır
-  const unassignUser = async (vehicle) => {
-    try {
-      await apiClient.patch(`/admin/vehicles/${vehicle.id}/assign-user`, { appUserId: null });
-      handleDataChange(`${vehicle.licensePlate} aracından kullanıcı ataması kaldırıldı.`);
-    } catch (err) {
-      toast.error(err?.response?.data?.message || "Atama kaldırılamadı.");
-    }
-  };
-
-  // NEW: Hızlı atama/değiştirme (basit prompt örneği)
-  const assignUserByPrompt = async (vehicle) => {
-    const userId = window.prompt("Atanacak kullanıcı ID (GUID) girin:");
-    if (!userId) return;
-    try {
-      await apiClient.patch(`/admin/vehicles/${vehicle.id}/assign-user`, { appUserId: userId });
-      handleDataChange(`${vehicle.licensePlate} için kullanıcı ataması güncellendi.`);
-    } catch (err) {
-      toast.error(err?.response?.data?.message || "Atama güncellenemedi.");
-    }
-  };
-
   return (
       <>
         <ToastContainer />
 
-        <AddVehicleModal open={addModalOpen} handleOpen={handleOpenAddModal} onVehicleAdded={() => handleDataChange()} />
-        <EditVehicleModal open={editModalOpen} handleOpen={handleCloseEditModal} onVehicleUpdated={() => handleDataChange()} vehicleToEdit={currentVehicle} />
+        <AddVehicleModal
+            open={addModalOpen}
+            handleOpen={handleOpenAddModal}
+            onVehicleAdded={() => handleDataChange()}
+        />
+        <EditVehicleModal
+            open={editModalOpen}
+            handleOpen={handleCloseEditModal}
+            onVehicleUpdated={() => handleDataChange()}
+            vehicleToEdit={currentVehicle}
+        />
+        <AssignUserModal
+            open={assignModalOpen}
+            handleOpen={handleCloseAssignModal}
+            vehicle={vehicleToAssign}
+            onAssigned={() => handleDataChange()}
+        />
 
         <div className="mt-12 mb-8 flex flex-col gap-12">
           <Card>
             <CardHeader variant="gradient" color="gray" className="mb-4 p-6 flex justify-between items-center">
               <Typography variant="h6" color="white">Araç Listesi</Typography>
-              <Button size="sm" color="white" variant="text" className="flex items-center gap-2 border border-white/20 hover:bg-white/10" onClick={handleOpenAddModal}>
+              <Button
+                  size="sm" color="white" variant="text"
+                  className="flex items-center gap-2 border border-white/20 hover:bg-white/10"
+                  onClick={handleOpenAddModal}
+              >
                 + Yeni Ekle
               </Button>
             </CardHeader>
             <CardBody className="overflow-x-scroll px-0 pt-0 pb-2">
-              <table className="w-full min-w-[900px] table-auto">
+              <table className="w-full min-w-[860px] table-auto">
                 <thead>
                 <tr>
-                  {["Plaka", "Şoför Adı", "Kullanıcı", "Telefon", "Durum", "İşlem"].map((el) => (
-                      <th key={el} className={`border-b border-blue-gray-50 py-3 px-5 text-left ${el === "İşlem" ? "text-right" : ""}`}>
-                        <Typography variant="small" className="font-bold uppercase text-blue-gray-400">{el}</Typography>
+                  {["Plaka", "Kullanıcı Adı", "Telefon", "Durum", "İşlem"].map((el) => (
+                      <th
+                          key={el}
+                          className={`border-b border-blue-gray-50 py-3 px-5 text-left ${el === "İşlem" ? "text-right" : ""}`}
+                      >
+                        <Typography variant="small" className="font-bold uppercase text-blue-gray-400">
+                          {el}
+                        </Typography>
                       </th>
                   ))}
                 </tr>
@@ -154,27 +168,73 @@ export function Tables() {
                 <tbody>
                 {vehicles.map((vehicle, key) => {
                   const className = `py-3 px-5 ${key === vehicles.length - 1 ? "" : "border-b border-blue-gray-50"}`;
+                  const displayName = vehicle.userFullName && vehicle.userFullName !== "Atanmadı"
+                      ? toTitleCase(vehicle.userFullName)
+                      : vehicle.driverName && vehicle.driverName !== "Atanmadı"
+                          ? toTitleCase(vehicle.driverName)
+                          : null;
+
                   return (
                       <tr key={vehicle.id} className="hover:bg-blue-gray-50/50 transition-colors">
-                        <td className={className}><Typography className="text-sm font-semibold text-blue-gray-600">{vehicle.licensePlate}</Typography></td>
-                        <td className={className}><Typography className="text-xs font-normal text-blue-gray-500">{toTitleCase(vehicle.driverName)}</Typography></td>
-                        <td className={className}><Typography className="text-xs font-normal text-blue-gray-500">{vehicle.appUserId || "-"}</Typography></td>
-                        <td className={className}><Typography className="text-xs font-normal text-blue-gray-500">{vehicle.phoneNumber || "-"}</Typography></td>
                         <td className={className}>
-                          <Chip variant="ghost" size="sm" value={vehicle.isActive ? "Aktif" : "Pasif"} color={vehicle.isActive ? "green" : "blue-gray"} className="w-max font-bold" />
+                          <Typography className="text-sm font-semibold text-blue-gray-600">
+                            {vehicle.licensePlate}
+                          </Typography>
+                        </td>
+                        <td className={className}>
+                          {displayName ? (
+                              <Typography className="text-xs font-normal text-blue-gray-700">
+                                {displayName}
+                              </Typography>
+                          ) : (
+                              <Typography className="text-xs font-normal text-blue-gray-300 italic">
+                                Atanmadı
+                              </Typography>
+                          )}
+                        </td>
+                        <td className={className}>
+                          <Typography className="text-xs font-normal text-blue-gray-500">
+                            {vehicle.phoneNumber || "-"}
+                          </Typography>
+                        </td>
+                        <td className={className}>
+                          <Chip
+                              variant="ghost" size="sm"
+                              value={vehicle.isActive ? "Aktif" : "Pasif"}
+                              color={vehicle.isActive ? "green" : "blue-gray"}
+                              className="w-max font-bold"
+                          />
                         </td>
                         <td className={`${className} text-right`}>
-                          <div className="flex justify-end items-center gap-2">
-                            <Button size="sm" variant="text" color="blue" onClick={() => handleOpenEditModal(vehicle)}>Düzenle</Button>
-                            <Button size="sm" variant="text" color="green" onClick={() => assignUserByPrompt(vehicle)}>Kullanıcı Ata/Değiştir</Button>
-                            <Button size="sm" variant="text" color="amber" onClick={() => unassignUser(vehicle)}>Atamayı Kaldır</Button>
-                            <Button size="sm" variant="text" color="red" onClick={() => handleDeleteToast(vehicle.id, vehicle.licensePlate)}>Sil</Button>
+                          <div className="flex justify-end items-center gap-1 flex-wrap">
+                            <Button size="sm" variant="text" color="blue" onClick={() => handleOpenEditModal(vehicle)}>
+                              Düzenle
+                            </Button>
+                            <Button size="sm" variant="text" color="green" onClick={() => handleOpenAssignModal(vehicle)}>
+                              Kullanıcı Ata
+                            </Button>
+                            <Button
+                                size="sm" variant="text" color="amber"
+                                onClick={() => unassignUser(vehicle)}
+                                disabled={!vehicle.appUserId}
+                            >
+                              Kaldır
+                            </Button>
+                            <Button size="sm" variant="text" color="red" onClick={() => handleDeleteToast(vehicle.id, vehicle.licensePlate)}>
+                              Sil
+                            </Button>
                           </div>
                         </td>
                       </tr>
                   );
                 })}
-                {vehicles.length === 0 && <tr><td colSpan={6} className="p-4 text-center text-gray-500">Kayıtlı araç yok.</td></tr>}
+                {vehicles.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="p-6 text-center text-blue-gray-400">
+                        Kayıtlı araç bulunamadı.
+                      </td>
+                    </tr>
+                )}
                 </tbody>
               </table>
             </CardBody>
@@ -195,9 +255,14 @@ export function Tables() {
                   <table className="w-full min-w-[640px] table-auto">
                     <thead>
                     <tr>
-                      {["Plaka", "Şoför Adı", "Telefon", "Aksiyon"].map((el) => (
-                          <th key={el} className={`border-b border-blue-gray-50 py-3 px-5 text-left ${el === "Aksiyon" ? "text-right" : ""}`}>
-                            <Typography variant="small" className="font-bold uppercase text-blue-gray-400">{el}</Typography>
+                      {["Plaka", "Kullanıcı Adı", "Telefon", "Aksiyon"].map((el) => (
+                          <th
+                              key={el}
+                              className={`border-b border-blue-gray-50 py-3 px-5 text-left ${el === "Aksiyon" ? "text-right" : ""}`}
+                          >
+                            <Typography variant="small" className="font-bold uppercase text-blue-gray-400">
+                              {el}
+                            </Typography>
                           </th>
                       ))}
                     </tr>
@@ -205,11 +270,31 @@ export function Tables() {
                     <tbody>
                     {idleVehicles.map((vehicle, key) => {
                       const className = `py-3 px-5 ${key === idleVehicles.length - 1 ? "" : "border-b border-blue-gray-50"}`;
+                      const displayName = vehicle.userFullName && vehicle.userFullName !== "Atanmadı"
+                          ? toTitleCase(vehicle.userFullName)
+                          : vehicle.driverName && vehicle.driverName !== "Atanmadı"
+                              ? toTitleCase(vehicle.driverName)
+                              : null;
+
                       return (
                           <tr key={`idle-${vehicle.id}`} className="hover:bg-blue-gray-50/50 transition-colors">
-                            <td className={className}><Typography className="text-sm font-semibold text-blue-gray-600">{vehicle.licensePlate}</Typography></td>
-                            <td className={className}><Typography className="text-xs font-normal text-blue-gray-500">{toTitleCase(vehicle.driverName)}</Typography></td>
-                            <td className={className}><Typography className="text-xs font-normal text-blue-gray-500">{vehicle.phoneNumber || "-"}</Typography></td>
+                            <td className={className}>
+                              <Typography className="text-sm font-semibold text-blue-gray-600">
+                                {vehicle.licensePlate}
+                              </Typography>
+                            </td>
+                            <td className={className}>
+                              {displayName ? (
+                                  <Typography className="text-xs font-normal text-blue-gray-700">{displayName}</Typography>
+                              ) : (
+                                  <Typography className="text-xs font-normal text-blue-gray-300 italic">Atanmadı</Typography>
+                              )}
+                            </td>
+                            <td className={className}>
+                              <Typography className="text-xs font-normal text-blue-gray-500">
+                                {vehicle.phoneNumber || "-"}
+                              </Typography>
+                            </td>
                             <td className={`${className} text-right`}>
                               <div className="flex justify-end items-center gap-2">
                                 <Tooltip content="Aracı Pasife Al">
