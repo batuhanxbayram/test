@@ -101,7 +101,7 @@ const TVQueuePage = () => {
     if (data.length > 2) {
       const slideTimer = setInterval(() => {
         setCurrentIndex((prevIndex) => (prevIndex + 2) % data.length);
-      }, 60000);
+      }, 20000);
       return () => clearInterval(slideTimer);
     } else {
       setCurrentIndex(0);
