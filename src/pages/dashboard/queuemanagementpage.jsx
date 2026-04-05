@@ -7,7 +7,6 @@ import {
 import {
     DndContext,
     closestCenter,
-    KeyboardSensor,
     PointerSensor,
     useSensor,
     useSensors,
@@ -15,19 +14,17 @@ import {
 import {
     arrayMove,
     SortableContext,
-    sortableKeyboardCoordinates,
     useSortable,
     verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import { Bars3Icon } from "@heroicons/react/24/solid";
+// ❌ CSS import YOK - uyumsuz olduğu için kaldırıldı
 import apiClient from "@/api/axiosConfig";
 import { HubConnectionBuilder, LogLevel } from "@microsoft/signalr";
 import { toast } from "react-toastify";
 
 const HUB_URL = "https://75ymkt.com/hubs/queue";
 
-// --- Sürüklenebilir Satır Bileşeni ---
+// --- Sürüklenebilir Satır ---
 function SortableRow({ vehicle, index, onRemove }) {
     const {
         attributes,
@@ -38,39 +35,55 @@ function SortableRow({ vehicle, index, onRemove }) {
         isDragging,
     } = useSortable({ id: vehicle.id });
 
+    // CSS import yerine manuel transform string
+    const transformStr = transform
+        ? `translate3d(${transform.x}px, ${transform.y}px, 0) scaleX(${transform.scaleX ?? 1}) scaleY(${transform.scaleY ?? 1})`
+        : undefined;
+
     const style = {
-        transform: CSS.Transform.toString(transform),
-        transition,
+        transform: transformStr,
+        transition: transition ?? undefined,
         opacity: isDragging ? 0.5 : 1,
-        background: isDragging ? "#f0f9ff" : "white",
-        zIndex: isDragging ? 999 : "auto",
+        backgroundColor: isDragging ? "#eff6ff" : "white",
+        position: "relative",
     };
 
     return (
         <tr ref={setNodeRef} style={style}>
-            {/* Sürükleme Tutacağı */}
-            <td className="py-3 px-5 border-b font-semibold text-blue-gray-400 w-12">
+            <td className="py-3 px-3 border-b w-10">
                 <div
                     {...attributes}
                     {...listeners}
-                    className="cursor-grab active:cursor-grabbing p-1 rounded hover:bg-blue-gray-50 inline-flex"
-                    title="Sırayı değiştirmek için sürükle"
+                    style={{
+                        cursor: isDragging ? "grabbing" : "grab",
+                        display: "inline-flex",
+                        padding: "4px",
+                        borderRadius: "4px",
+                        userSelect: "none",
+                    }}
+                    title="Sürükleyerek sıra değiştir"
                 >
-                    <Bars3Icon className="h-5 w-5" />
+                    {/* Hamburger ikonu - Heroicons olmadan */}
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="20"
+                        height="20"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="#90a4ae"
+                        strokeWidth={2}
+                    >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
                 </div>
             </td>
             <td className="py-3 px-5 border-b font-semibold text-blue-gray-700">
                 #{index + 1}
             </td>
             <td className="py-3 px-5 border-b">{vehicle.licensePlate}</td>
-            <td className="py-3 px-5 border-b">{vehicle.userFullName}</td>
+            <td className="py-3 px-5 border-b">{vehicle.userFullName || vehicle.driverName || "-"}</td>
             <td className="py-3 px-5 border-b">
-                <Button
-                    color="red"
-                    size="sm"
-                    variant="text"
-                    onClick={() => onRemove(vehicle.id)}
-                >
+                <Button color="red" size="sm" variant="text" onClick={() => onRemove(vehicle.id)}>
                     Çıkar
                 </Button>
             </td>
@@ -88,9 +101,9 @@ export function QueueManagementPage() {
     const [isSaving, setIsSaving] = useState(false);
 
     const sensors = useSensors(
-        useSensor(PointerSensor),
-        useSensor(KeyboardSensor, {
-            coordinateGetter: sortableKeyboardCoordinates,
+        useSensor(PointerSensor, {
+            // Yanlışlıkla sürüklemeyi önlemek için 8px eşik
+            activationConstraint: { distance: 8 },
         })
     );
 
@@ -102,8 +115,8 @@ export function QueueManagementPage() {
             ]);
             setRoutes(routesRes.data);
             setAllVehicles(vehiclesRes.data);
-        } catch (error) {
-            console.error("Veri hatası:", error);
+        } catch (err) {
+            console.error("Veri hatası:", err);
         }
     };
 
@@ -111,8 +124,8 @@ export function QueueManagementPage() {
         if (!selectedRoute) return;
         setLoadingQueue(true);
         try {
-            const response = await apiClient.get(`/routes/${selectedRoute.id}/queue`);
-            setQueuedVehicles(response.data);
+            const res = await apiClient.get(`/routes/${selectedRoute.id}/queue`);
+            setQueuedVehicles(res.data);
         } catch {
             setQueuedVehicles([]);
         } finally {
@@ -122,19 +135,14 @@ export function QueueManagementPage() {
 
     useEffect(() => {
         fetchBaseData();
-
         const connection = new HubConnectionBuilder()
             .withUrl(HUB_URL)
             .withAutomaticReconnect()
             .configureLogging(LogLevel.Information)
             .build();
-
         connection.start().then(() => {
-            connection.on("ReceiveQueueUpdate", () => {
-                fetchBaseData();
-            });
+            connection.on("ReceiveQueueUpdate", fetchBaseData);
         }).catch(console.error);
-
         return () => connection.stop();
     }, []);
 
@@ -143,7 +151,6 @@ export function QueueManagementPage() {
         setVehicleToAdd("");
     }, [selectedRoute]);
 
-    // --- Drag & Drop Bitti: Sırayı Kaydet ---
     const handleDragEnd = async (event) => {
         const { active, over } = event;
         if (!over || active.id === over.id) return;
@@ -152,20 +159,17 @@ export function QueueManagementPage() {
         const newIndex = queuedVehicles.findIndex((v) => v.id === over.id);
         const reordered = arrayMove(queuedVehicles, oldIndex, newIndex);
 
-        // UI'ı anında güncelle (optimistic update)
-        setQueuedVehicles(reordered);
+        setQueuedVehicles(reordered); // Optimistic update
 
-        // Backend'e kaydet
         setIsSaving(true);
         try {
             await apiClient.post(`/routes/${selectedRoute.id}/queue/reorder`, {
                 orderedVehicleIds: reordered.map((v) => v.id),
             });
             toast.success("Sıra güncellendi!", { autoClose: 1500 });
-        } catch (err) {
-            toast.error("Sıra kaydedilemedi, yenileniyor...");
-            // Hata durumunda orijinal sırayı geri yükle
-            fetchQueueData();
+        } catch {
+            toast.error("Sıra kaydedilemedi.");
+            fetchQueueData(); // Hata varsa geri al
         } finally {
             setIsSaving(false);
         }
@@ -179,8 +183,8 @@ export function QueueManagementPage() {
             });
             setVehicleToAdd("");
             await fetchQueueData();
-        } catch (error) {
-            toast.error(error.response?.data || "Araç eklenemedi.");
+        } catch (err) {
+            toast.error(err.response?.data || "Araç eklenemedi.");
         }
     };
 
@@ -207,19 +211,16 @@ export function QueueManagementPage() {
         <div className="mt-12 mb-8">
             <Card>
                 <CardHeader variant="gradient" color="gray" className="mb-8 p-6">
-                    <Typography variant="h6" color="white">
-                        Güzergah Sıra Yönetimi
-                    </Typography>
+                    <Typography variant="h6" color="white">Güzergah Sıra Yönetimi</Typography>
                     <Typography variant="small" color="white" className="opacity-70 font-normal mt-1">
-                        Sırayı değiştirmek için satırları sürükleyip bırakın.
+                        ☰ ikonuna basılı tutup sürükleyerek sıra değiştirebilirsiniz.
                     </Typography>
                 </CardHeader>
                 <CardBody className="p-6 flex flex-col lg:flex-row gap-8">
-                    {/* SOL PANEL - Güzergah Listesi */}
+
+                    {/* SOL - Güzergah seçimi */}
                     <div className="lg:w-1/3">
-                        <Typography variant="h6" color="blue-gray" className="mb-4">
-                            Güzergah Seçin
-                        </Typography>
+                        <Typography variant="h6" color="blue-gray" className="mb-4">Güzergah Seçin</Typography>
                         <Card className="w-full border">
                             <List>
                                 {routes.map((route) => (
@@ -236,13 +237,11 @@ export function QueueManagementPage() {
                         </Card>
                     </div>
 
-                    {/* SAĞ PANEL - Sıra Tablosu */}
+                    {/* SAĞ - Sıra tablosu */}
                     <div className="lg:w-2/3">
                         {!selectedRoute ? (
                             <div className="flex items-center justify-center h-full border-2 border-dashed rounded-lg p-12">
-                                <Typography color="blue-gray">
-                                    Lütfen soldan bir güzergah seçin
-                                </Typography>
+                                <Typography color="blue-gray">Lütfen soldan bir güzergah seçin</Typography>
                             </div>
                         ) : (
                             <div>
@@ -251,8 +250,8 @@ export function QueueManagementPage() {
                                         {selectedRoute.routeName} — {queuedVehicles.length} Araç
                                     </Typography>
                                     {isSaving && (
-                                        <Typography variant="small" color="blue" className="animate-pulse">
-                                            Kaydediliyor...
+                                        <Typography variant="small" color="blue" className="animate-pulse font-semibold">
+                                            ⏳ Kaydediliyor...
                                         </Typography>
                                     )}
                                 </div>
@@ -267,14 +266,8 @@ export function QueueManagementPage() {
                                             <thead>
                                             <tr>
                                                 {["", "Sıra", "Plaka", "Şoför", "İşlem"].map((h) => (
-                                                    <th
-                                                        key={h}
-                                                        className="border-b border-blue-gray-50 py-3 px-5 text-left"
-                                                    >
-                                                        <Typography
-                                                            variant="small"
-                                                            className="font-bold uppercase text-blue-gray-400"
-                                                        >
+                                                    <th key={h} className="border-b border-blue-gray-50 py-3 px-5 text-left">
+                                                        <Typography variant="small" className="font-bold uppercase text-blue-gray-400">
                                                             {h}
                                                         </Typography>
                                                     </th>
@@ -314,7 +307,7 @@ export function QueueManagementPage() {
                                     </DndContext>
                                 </div>
 
-                                {/* Araç Ekleme Bölümü */}
+                                {/* Araç ekleme */}
                                 <div className="flex items-end gap-4 bg-gray-50 p-4 rounded-lg border border-gray-200">
                                     <div className="flex-grow">
                                         <Select
@@ -327,7 +320,7 @@ export function QueueManagementPage() {
                                         >
                                             {availableVehicles.map((vehicle) => (
                                                 <Option key={vehicle.id} value={String(vehicle.id)}>
-                                                    {vehicle.licensePlate} ({vehicle.driverName || vehicle.userFullName})
+                                                    {vehicle.licensePlate} ({vehicle.driverName || vehicle.userFullName || "-"})
                                                 </Option>
                                             ))}
                                         </Select>
