@@ -49,6 +49,7 @@ export function Sidenav({ brandName, routes }) {
               <ul key={key} className="mb-4 flex flex-col gap-1">
                 {pages && pages
                   .filter((page) => !page.roles || page.roles.includes(userRole))
+                    .filter((page) => !page.hidden)
                   .map(({ icon, name, path }) => (
                     <li key={name}>
                       <NavLink 

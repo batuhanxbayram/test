@@ -6,7 +6,7 @@ import {
   Squares2X2Icon,
   QueueListIcon,
   PaperAirplaneIcon,
-  ServerStackIcon,
+  ServerStackIcon, TableCellsIcon,
 } from "@heroicons/react/24/solid";
 
 import {
@@ -20,6 +20,7 @@ import {
 
 import { SignIn } from "@/pages/auth";
 import TVQueuePage from "./pages/dashboard/TVQueuePage";
+import DispatchDetailPage from "./pages/dashboard/DispatchDetailPage";
 
 const icon = {
   className: "w-5 h-5 text-inherit",
@@ -34,6 +35,14 @@ export const routes = [
         name: "Araç Sıraları",
         path: "/arac-siralari", // URL artık böyle görünecek
         element: <Home />,
+      },
+      {
+        icon: <TableCellsIcon {...icon} />,
+        name: "Detay",
+        path: "/dispatch-detay/:routeId",
+        element: <DispatchDetailPage />,
+        roles: ['admin'],
+        hidden: true, // Menüde görünmesin
       },
       {
         icon: <QueueListIcon {...icon} />,
