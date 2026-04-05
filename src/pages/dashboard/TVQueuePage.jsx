@@ -134,12 +134,14 @@ const TVQueuePage = () => {
             <div className="bg-[#64748B] text-white w-12 h-12 flex items-center justify-center rounded-lg font-black text-2xl shadow-inner border border-white/10">
               75
             </div>
-            <h1 className="text-lg font-black tracking-widest text-white uppercase antialiased">ARAÇ TAKİP SİSTEMİ</h1>
+            <h1 className="text-lg font-black tracking-widest text-white uppercase antialiased">SIRA TAKİP SİSTEMİ</h1>
           </div>
 
           <div className="flex items-center gap-6 text-white text-right">
             <div className="flex flex-col leading-none">
-              <span className="text-xl font-mono font-black tracking-tighter">{time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+             <span className="text-xl font-mono font-black tracking-tighter">
+    {time.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
+            </span>
               <span className="text-xs font-bold text-[#BDB2A7] mt-1 uppercase tracking-widest">
                {time.toLocaleDateString('tr-TR', { day: '2-digit', month: 'long', year: 'numeric' })}
              </span>

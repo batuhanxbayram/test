@@ -10,7 +10,7 @@ import {
     TabsHeader,
     Tab
 } from "@material-tailwind/react";
-import { ForwardIcon, InformationCircleIcon } from "@heroicons/react/24/solid";
+import { ForwardIcon, InformationCircleIcon, TvIcon } from "@heroicons/react/24/solid";
 import apiClient from "@/api/axiosConfig";
 import { useMaterialTailwindController } from "@/context";
 import { VehicleQueueCard } from "@/widgets/layout/VehicleQueueCard";
@@ -23,14 +23,11 @@ export function Home() {
     const [routesWithQueues, setRoutesWithQueues] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-
-    // --- YENİ EKLENEN KISIM: MOBİL KONTROLÜ VE SEÇİLİ SEKME ---
-    const [activeTab, setActiveTab] = useState(""); // Seçili güzergah ID'si
+    const [activeTab, setActiveTab] = useState("");
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
     const HUB_URL = "https://75ymkt.com/hubs/queue";
 
-    // Ekran boyutunu dinle (Mobil mi Masaüstü mü?)
     useEffect(() => {
         const handleResize = () => setIsMobile(window.innerWidth < 768);
         window.addEventListener("resize", handleResize);
@@ -42,10 +39,8 @@ export function Home() {
             const response = await apiClient.get("/queues/all");
             const data = response.data;
             setRoutesWithQueues(data);
-
-            // Veri ilk geldiğinde, eğer mobildeysek ve hiç sekme seçilmemişse ilkini seç
             if (data.length > 0 && !activeTab) {
-                setActiveTab(data[0].routeId); // İlk güzergahı varsayılan yap
+                setActiveTab(data[0].routeId);
             }
         } catch (err) {
             console.error(err);
@@ -69,17 +64,14 @@ export function Home() {
 
         connection.start()
             .then(() => {
-                console.log("🟢 Home Sayfası: SignalR Bağlandı!");
+                console.log("🟢 Home: SignalR Bağlandı!");
                 connection.on("ReceiveQueueUpdate", () => {
-                    console.log("🔔 Güncelleme geldi!");
                     fetchAllQueues();
                 });
             })
-            .catch(err => console.error("🔴 SignalR Bağlantı Hatası:", err));
+            .catch(err => console.error("🔴 SignalR Hatası:", err));
 
-        return () => {
-            connection.stop();
-        };
+        return () => connection.stop();
     }, []);
 
     const handleNextVehicle = async (routeId) => {
@@ -91,11 +83,16 @@ export function Home() {
         }
     };
 
-    if (loading) return <div className="flex justify-center items-center h-screen"><Spinner className="h-16 w-16" /></div>;
-    if (error) return <Typography color="red" className="mt-12 text-center">{error}</Typography>;
+    if (loading) return (
+        <div className="flex justify-center items-center h-screen">
+            <Spinner className="h-16 w-16" />
+        </div>
+    );
 
-    // --- MOBİL İÇİN FİLTRELEME ---
-    // Eğer mobildeysek sadece seçili olanı, değilsek hepsini göster
+    if (error) return (
+        <Typography color="red" className="mt-12 text-center">{error}</Typography>
+    );
+
     const displayedRoutes = isMobile
         ? routesWithQueues.filter(r => String(r.routeId) === String(activeTab))
         : routesWithQueues;
@@ -103,14 +100,24 @@ export function Home() {
     return (
         <div className="mt-6 md:mt-12">
 
-            {/* --- MOBİL İÇİN SEKME MENÜSÜ --- */}
+            {/* TV Ekranı Butonu */}
+            <div className="flex justify-end mb-4">
+                <Button
+                    size="sm"
+                    className="flex items-center gap-2 bg-gray-800 text-white hover:bg-gray-900 normal-case"
+                    onClick={() => window.open("/tv/monitor", "_blank")}
+                >
+                    <TvIcon className="h-4 w-4" />
+                    TV Ekranı
+                </Button>
+            </div>
+
+            {/* Mobil sekme menüsü */}
             {isMobile && routesWithQueues.length > 0 && (
-                // 1. DÜZENLEME: Alanı yatayda kaydırılabilir (overflow-x-auto) yapıyoruz. iOS cihazlarda akıcı kaydırma için ek stiller koyduk.
                 <div className="mb-6 w-full overflow-x-auto pb-2 scroll-smooth" style={{ WebkitOverflowScrolling: "touch" }}>
-                    {/* 2. DÜZENLEME: Tabs genişliğini min-w-full ve w-max yaparak ekrana sıkışmasını engelledik. */}
                     <Tabs value={activeTab} className="w-max min-w-full">
                         <TabsHeader
-                            className="bg-transparent flex-nowrap gap-2" // gap-2 ile butonlar arasına hafif boşluk koyduk
+                            className="bg-transparent flex-nowrap gap-2"
                             indicatorProps={{
                                 className: "bg-gray-900/10 shadow-none !text-gray-900",
                             }}
@@ -120,7 +127,6 @@ export function Home() {
                                     key={routeId}
                                     value={routeId}
                                     onClick={() => setActiveTab(routeId)}
-                                    // 3. DÜZENLEME: whitespace-nowrap yazının alt satıra düşmesini engeller, shrink-0 sekmenin daralmasını engeller.
                                     className={`w-max whitespace-nowrap px-5 py-2 shrink-0 ${activeTab === routeId ? "font-bold text-gray-900" : ""}`}
                                 >
                                     {routeName}
@@ -131,7 +137,7 @@ export function Home() {
                 </div>
             )}
 
-            {/* --- LİSTELEME ALANI --- */}
+            {/* Liste */}
             <div className={`
                 flex flex-col gap-6 pb-4
                 ${!isMobile ? "md:flex-row md:h-[calc(100vh-80px)] md:overflow-x-auto md:overflow-y-hidden" : ""}
@@ -151,7 +157,18 @@ export function Home() {
                                             {activeVehicles.length} Araç
                                         </Typography>
                                     </div>
-
+                                    {userRole === 'admin' && (
+                                        <div className="ml-4 flex-shrink-0">
+                                            <Button
+                                                size="sm"
+                                                className="flex items-center gap-2 bg-white text-gray-900 hover:bg-gray-100"
+                                                onClick={() => handleNextVehicle(route.routeId)}
+                                                disabled={activeVehicles.length < 2}
+                                            >
+                                                <ForwardIcon className="h-4 w-4" /> İlerle
+                                            </Button>
+                                        </div>
+                                    )}
                                 </CardHeader>
                                 <CardBody className="p-4 pt-0 flex-grow overflow-y-auto max-h-[60vh] md:max-h-full">
                                     {activeVehicles.length > 0 ? (
