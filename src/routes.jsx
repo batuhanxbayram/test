@@ -6,7 +6,7 @@ import {
   Squares2X2Icon,
   QueueListIcon,
   PaperAirplaneIcon,
-  ServerStackIcon, TableCellsIcon,
+  ServerStackIcon,
 } from "@heroicons/react/24/solid";
 
 import {
@@ -15,7 +15,7 @@ import {
   Tables,
   Notifications,
   QueueManagementPage,
-  DispatchPage, MyProfile,
+  DispatchPage,
 } from "@/pages/dashboard";
 
 import { SignIn } from "@/pages/auth";
@@ -33,16 +33,8 @@ export const routes = [
       {
         icon: <Squares2X2Icon {...icon} />,
         name: "Araç Sıraları",
-        path: "/arac-siralari", // URL artık böyle görünecek
+        path: "/arac-siralari",
         element: <Home />,
-      },
-      {
-        icon: <TableCellsIcon {...icon} />,
-        name: "Detay",
-        path: "/dispatch-detay/:routeId",
-        element: <DispatchDetailPage />,
-        roles: ['admin'],
-        hidden: true, // Menüde görünmesin
       },
       {
         icon: <QueueListIcon {...icon} />,
@@ -56,6 +48,12 @@ export const routes = [
         name: "Özel Görev",
         path: "/ozel-gorev",
         element: <DispatchPage />,
+        roles: ['admin'],
+      },
+      {
+        hidden: true,
+        path: "/ozel-gorev/:routeId",
+        element: <DispatchDetailPage />,
         roles: ['admin'],
       },
       {
@@ -79,14 +77,6 @@ export const routes = [
         element: <Notifications />,
         roles: ['admin'],
       },
-      {
-        icon: <UserCircleIcon {...icon} />,
-        name: "Profilim",
-        path: "/profilim",
-        element: <MyProfile/>,
-        roles: ["user"],
-      },
-
     ],
   },
   {
@@ -102,7 +92,7 @@ export const routes = [
     ],
   },
   {
-    layout: "tv", // Layout ismi farklı olduğu için menüde gözükmez
+    layout: "tv",
     pages: [
       {
         name: "TV Monitor",
