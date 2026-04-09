@@ -16,6 +16,7 @@ import {
   Notifications,
   QueueManagementPage,
   DispatchPage,
+  MyProfile,
 } from "@/pages/dashboard";
 
 import { SignIn } from "@/pages/auth";
@@ -76,6 +77,13 @@ export const routes = [
         path: "/guzergahlar",
         element: <Notifications />,
         roles: ['admin'],
+      },
+      {
+        icon: <UserCircleIcon {...icon} />,
+        name: "Profilim",
+        path: "/profilim",
+        element: <MyProfile />,
+        roles: ['user'],
       },
     ],
   },

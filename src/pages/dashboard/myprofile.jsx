@@ -136,58 +136,6 @@ export function MyProfile() {
     return (
         <div className="mt-12 mb-8 flex flex-col gap-8 max-w-2xl mx-auto">
 
-            {/* Kişisel Bilgiler */}
-            <Card>
-                <CardHeader variant="gradient" color="gray" className="mb-4 p-6 flex items-center gap-4">
-                    <UserCircleIcon className="h-8 w-8 text-white opacity-80" />
-                    <Typography variant="h6" color="white">Kişisel Bilgilerim</Typography>
-                </CardHeader>
-                <CardBody className="flex flex-col gap-6 px-6 pb-6">
-                    <div className="flex flex-col gap-1">
-                        <Typography variant="small" className="font-semibold text-blue-gray-400 uppercase text-xs tracking-wide">
-                            Ad Soyad
-                        </Typography>
-                        <Typography variant="h6" className="text-blue-gray-800">
-                            {userInfo.fullName || "-"}
-                        </Typography>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                        <Typography variant="small" className="font-semibold text-blue-gray-400 uppercase text-xs tracking-wide">
-                            Kullanıcı Adı
-                        </Typography>
-                        <Typography className="text-blue-gray-700">
-                            {userInfo.userName || "-"}
-                        </Typography>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                        <Typography variant="small" className="font-semibold text-blue-gray-400 uppercase text-xs tracking-wide">
-                            Telefon Numarası
-                        </Typography>
-                        <Typography className="text-blue-gray-700">
-                            {userInfo.phoneNumber || "-"}
-                        </Typography>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                        <Typography variant="small" className="font-semibold text-blue-gray-400 uppercase text-xs tracking-wide">
-                            Araç Plakası
-                        </Typography>
-                        {userInfo.licensePlate && userInfo.licensePlate !== "-" ? (
-                            <Chip
-                                variant="ghost"
-                                color="blue"
-                                value={formatPlate(userInfo.licensePlate)}
-                                className="w-max font-bold text-sm"
-                            />
-                        ) : (
-                            <Typography className="text-blue-gray-400 italic text-sm">
-                                Atanmış araç yok
-                            </Typography>
-                        )}
-                    </div>
-                </CardBody>
-            </Card>
-
-            {/* Sıra Durumu */}
             <Card>
                 <CardHeader variant="gradient" color="gray" className="mb-4 p-6 flex items-center gap-4">
                     <TruckIcon className="h-8 w-8 text-white opacity-80" />
@@ -254,6 +202,54 @@ export function MyProfile() {
                     )}
                 </CardBody>
             </Card>
+
+
+
+            {/* Kişisel Bilgiler */}
+            <Card>
+                <CardHeader variant="gradient" color="gray" className="mb-4 p-6 flex items-center gap-4">
+                    <UserCircleIcon className="h-8 w-8 text-white opacity-80" />
+                    <Typography variant="h6" color="white">Kişisel Bilgilerim</Typography>
+                </CardHeader>
+                <CardBody className="flex flex-col gap-6 px-6 pb-6">
+                    <div className="flex flex-col gap-1">
+                        <Typography variant="small" className="font-semibold text-blue-gray-400 uppercase text-xs tracking-wide">
+                            Ad Soyad
+                        </Typography>
+                        <Typography variant="h6" className="text-blue-gray-800">
+                            {userInfo.fullName || "-"}
+                        </Typography>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                        <Typography variant="small" className="font-semibold text-blue-gray-400 uppercase text-xs tracking-wide">
+                            Kullanıcı Adı
+                        </Typography>
+                        <Typography className="text-blue-gray-700">
+                            {userInfo.userName || "-"}
+                        </Typography>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                        <Typography variant="small" className="font-semibold text-blue-gray-400 uppercase text-xs tracking-wide">
+                            Araç Plakası
+                        </Typography>
+                        {userInfo.licensePlate && userInfo.licensePlate !== "-" ? (
+                            <Chip
+                                variant="ghost"
+                                color="blue"
+                                value={formatPlate(userInfo.licensePlate)}
+                                className="w-max font-bold text-sm"
+                            />
+                        ) : (
+                            <Typography className="text-blue-gray-400 italic text-sm">
+                                Atanmış araç yok
+                            </Typography>
+                        )}
+                    </div>
+                </CardBody>
+            </Card>
+
+            {/* Sıra Durumu */}
+
 
             {/* Şifre Değiştir */}
             <Card>

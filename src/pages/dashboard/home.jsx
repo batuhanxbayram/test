@@ -101,16 +101,18 @@ export function Home() {
         <div className="mt-6 md:mt-12">
 
             {/* TV Ekranı Butonu */}
-            <div className="flex justify-end mb-4">
-                <Button
-                    size="sm"
-                    className="flex items-center gap-2 bg-gray-800 text-white hover:bg-gray-900 normal-case"
-                    onClick={() => window.open("/tv/monitor", "_blank")}
-                >
-                    <TvIcon className="h-4 w-4" />
-                    TV Ekranı
-                </Button>
-            </div>
+            {userRole !== 'user' && (
+                <div className="flex justify-end mb-4">
+                    <Button
+                        size="sm"
+                        className="flex items-center gap-2 bg-gray-800 text-white hover:bg-gray-900 normal-case"
+                        onClick={() => window.open("/tv/monitor", "_blank")}
+                    >
+                        <TvIcon className="h-4 w-4" />
+                        TV Ekranı
+                    </Button>
+                </div>
+                )}
 
             {/* Mobil sekme menüsü */}
             {isMobile && routesWithQueues.length > 0 && (
@@ -157,18 +159,7 @@ export function Home() {
                                             {activeVehicles.length} Araç
                                         </Typography>
                                     </div>
-                                    {userRole === 'admin' && (
-                                        <div className="ml-4 flex-shrink-0">
-                                            <Button
-                                                size="sm"
-                                                className="flex items-center gap-2 bg-white text-gray-900 hover:bg-gray-100"
-                                                onClick={() => handleNextVehicle(route.routeId)}
-                                                disabled={activeVehicles.length < 2}
-                                            >
-                                                <ForwardIcon className="h-4 w-4" /> İlerle
-                                            </Button>
-                                        </div>
-                                    )}
+
                                 </CardHeader>
                                 <CardBody className="p-4 pt-0 flex-grow overflow-y-auto max-h-[60vh] md:max-h-full">
                                     {activeVehicles.length > 0 ? (
