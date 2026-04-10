@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
     Typography,
     Card,
@@ -14,7 +14,7 @@ import { ForwardIcon, InformationCircleIcon, TvIcon } from "@heroicons/react/24/
 import apiClient from "@/api/axiosConfig";
 import { useMaterialTailwindController } from "@/context";
 import { VehicleQueueCard } from "@/widgets/layout/VehicleQueueCard";
-import { HubConnectionBuilder, LogLevel, HttpTransportType } from "@microsoft/signalr";
+import { HubConnectionBuilder, LogLevel, HttpTransportType, HubConnectionState } from "@microsoft/signalr";
 import { useNavigate } from "react-router-dom";
 
 export function Home() {
@@ -29,6 +29,8 @@ export function Home() {
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
     const navigate = useNavigate();
+    const connectionRef = useRef(null);
+    const isConnectingRef = useRef(false);
 
     const HUB_URL = "https://75ymkt.com/hubs/queue";
 
@@ -43,7 +45,6 @@ export function Home() {
             const response = await apiClient.get("/queues/all");
             const data = response.data;
             setRoutesWithQueues(data);
-
             if (data.length > 0 && !activeTab) {
                 setActiveTab(data[0].routeId);
             }
@@ -55,30 +56,58 @@ export function Home() {
         }
     };
 
-    useEffect(() => {
-        fetchAllQueues();
+    const startSignalR = async () => {
+        // Zaten bağlanıyorsa veya bağlıysa tekrar bağlanma
+        if (isConnectingRef.current) return;
+        if (connectionRef.current?.state === HubConnectionState.Connected) return;
+
+        isConnectingRef.current = true;
 
         const connection = new HubConnectionBuilder()
             .withUrl(HUB_URL, {
                 skipNegotiation: true,
                 transport: HttpTransportType.WebSockets
             })
-            .withAutomaticReconnect()
-            .configureLogging(LogLevel.Information)
+            .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
+            .configureLogging(LogLevel.Warning)
             .build();
 
-        connection.start()
-            .then(() => {
-                console.log("🟢 Home Sayfası: SignalR Bağlandı!");
-                connection.on("ReceiveQueueUpdate", () => {
-                    console.log("🔔 Güncelleme geldi!");
-                    fetchAllQueues();
-                });
-            })
-            .catch(err => console.error("🔴 SignalR Bağlantı Hatası:", err));
+        connection.onclose(() => {
+            isConnectingRef.current = false;
+        });
+
+        connection.onreconnected(() => {
+            console.log("🟢 Home SignalR yeniden bağlandı!");
+            fetchAllQueues();
+        });
+
+        connectionRef.current = connection;
+
+        try {
+            await connection.start();
+            console.log("🟢 Home Sayfası: SignalR Bağlandı!");
+            connection.on("ReceiveQueueUpdate", () => {
+                fetchAllQueues();
+            });
+        } catch (err) {
+            console.error("🔴 SignalR Bağlantı Hatası:", err?.message);
+            connectionRef.current = null;
+        } finally {
+            isConnectingRef.current = false;
+        }
+    };
+
+    useEffect(() => {
+        fetchAllQueues();
+        startSignalR();
 
         return () => {
-            connection.stop();
+            const conn = connectionRef.current;
+            if (conn && conn.state !== HubConnectionState.Disconnected) {
+                conn.stop().catch(() => {});
+            }
+            connectionRef.current = null;
+            isConnectingRef.current = false;
         };
     }, []);
 
@@ -100,15 +129,12 @@ export function Home() {
 
     return (
         <div className="mt-6 md:mt-12">
-
             {isMobile && routesWithQueues.length > 0 && (
                 <div className="mb-6 w-full overflow-x-auto pb-2 scroll-smooth" style={{ WebkitOverflowScrolling: "touch" }}>
                     <Tabs value={activeTab} className="w-max min-w-full">
                         <TabsHeader
                             className="bg-transparent flex-nowrap gap-2"
-                            indicatorProps={{
-                                className: "bg-gray-900/10 shadow-none !text-gray-900",
-                            }}
+                            indicatorProps={{ className: "bg-gray-900/10 shadow-none !text-gray-900" }}
                         >
                             {routesWithQueues.map(({ routeId, routeName }) => (
                                 <Tab
@@ -125,13 +151,9 @@ export function Home() {
                 </div>
             )}
 
-            <div className={`
-                flex flex-col gap-6 pb-4
-                ${!isMobile ? "md:flex-row md:h-[calc(100vh-80px)] md:overflow-x-auto md:overflow-y-hidden" : ""}
-            `}>
+            <div className={`flex flex-col gap-6 pb-4 ${!isMobile ? "md:flex-row md:h-[calc(100vh-80px)] md:overflow-x-auto md:overflow-y-hidden" : ""}`}>
                 {displayedRoutes.map(route => {
                     const activeVehicles = route.queuedVehicles.filter(v => v.isActive);
-
                     return (
                         <div key={route.routeId} className="w-full md:w-80 flex-shrink-0 transition-all duration-300">
                             <Card className="flex flex-col h-full shadow-lg border border-gray-200 bg-white">
@@ -145,7 +167,6 @@ export function Home() {
                                         </Typography>
                                     </div>
                                     <div className="ml-4 flex-shrink-0 flex items-center gap-2">
-                                        {/* TV Butonu - Sadece admin görür */}
                                         {userRole === 'admin' && (
                                             <Button
                                                 size="sm"

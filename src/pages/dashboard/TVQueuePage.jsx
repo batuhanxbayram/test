@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import apiClient from "../../api/axiosConfig";
-import { HubConnectionBuilder, HttpTransportType, LogLevel } from '@microsoft/signalr';
+import { HubConnectionBuilder, HttpTransportType, LogLevel, HubConnectionState } from '@microsoft/signalr';
 import { useSearchParams } from "react-router-dom";
 
 const TVQueuePage = () => {
   const [searchParams] = useSearchParams();
-  const singleRouteId = searchParams.get("routeId"); // null ise tüm rotalar gösterilir
+  const singleRouteId = searchParams.get("routeId");
 
   const [data, setData] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -13,28 +13,24 @@ const TVQueuePage = () => {
   const [loading, setLoading] = useState(true);
 
   const connectionRef = useRef(null);
+  const isConnectingRef = useRef(false);
 
   const HUB_URL = "https://75ymkt.com/hubs/queue";
 
-  // --- PLAKA FORMATLAYICI ---
   const formatLicensePlate = (plate) => {
     if (!plate) return "";
     const cleanPlate = plate.replace(/\s/g, "").toUpperCase();
     const regex = /^(\d{2})([A-Z]+)(\d+)$/;
     const match = cleanPlate.match(regex);
-    if (match) {
-      return `${match[1]} ${match[2]} ${match[3]}`;
-    }
+    if (match) return `${match[1]} ${match[2]} ${match[3]}`;
     return cleanPlate;
   };
-  // -------------------------
 
   const fetchData = async () => {
     try {
       const routesRes = await apiClient.get("/admin/routes");
       let routes = routesRes.data;
 
-      // Eğer tek rota ID'si varsa sadece onu filtrele
       if (singleRouteId) {
         routes = routes.filter(r => String(r.id) === String(singleRouteId));
       }
@@ -66,47 +62,66 @@ const TVQueuePage = () => {
     }
   };
 
-  useEffect(() => {
-    fetchData();
+  const startSignalR = async () => {
+    if (isConnectingRef.current) return;
+    if (connectionRef.current?.state === HubConnectionState.Connected) return;
 
-    if (connectionRef.current) return;
+    isConnectingRef.current = true;
 
     const connection = new HubConnectionBuilder()
         .withUrl(HUB_URL, {
           skipNegotiation: true,
           transport: HttpTransportType.WebSockets
         })
-        .withAutomaticReconnect()
-        .configureLogging(LogLevel.Information)
+        .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
+        .configureLogging(LogLevel.Warning)
         .build();
+
+    connection.onclose(() => {
+      isConnectingRef.current = false;
+    });
+
+    connection.onreconnected(() => {
+      console.log("🟢 TV SignalR yeniden bağlandı!");
+      fetchData();
+    });
 
     connectionRef.current = connection;
 
-    connection.start()
-        .then(() => {
-          console.log("🟢 TV Ekranı: SignalR (HTTPS) Bağlandı!");
-          connection.on("ReceiveQueueUpdate", () => {
-            console.log("🔔 Güncelleme sinyali alındı.");
-            fetchData();
-          });
-        })
-        .catch(err => console.error("🔴 SignalR Bağlantı Hatası:", err));
+    try {
+      await connection.start();
+      console.log("🟢 TV Ekranı: SignalR Bağlandı!");
+      connection.on("ReceiveQueueUpdate", () => {
+        fetchData();
+      });
+    } catch (err) {
+      console.error("🔴 TV SignalR Bağlantı Hatası:", err?.message);
+      connectionRef.current = null;
+    } finally {
+      isConnectingRef.current = false;
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+    startSignalR();
 
     const dataTimer = setInterval(fetchData, 30000);
     const clockTimer = setInterval(() => setTime(new Date()), 1000);
 
     return () => {
-      if (connectionRef.current) {
-        connectionRef.current.stop();
-        connectionRef.current = null;
+      const conn = connectionRef.current;
+      if (conn && conn.state !== HubConnectionState.Disconnected) {
+        conn.stop().catch(() => {});
       }
+      connectionRef.current = null;
+      isConnectingRef.current = false;
       clearInterval(dataTimer);
       clearInterval(clockTimer);
     };
   }, []);
 
   useEffect(() => {
-    // Tek rota modunda veya 2 veya daha az rota varsa slayt gerekmez
     if (!singleRouteId && data.length > 2) {
       const slideTimer = setInterval(() => {
         setCurrentIndex((prevIndex) => (prevIndex + 2) % data.length);
@@ -119,7 +134,6 @@ const TVQueuePage = () => {
 
   const getVisibleRoutes = () => {
     if (data.length === 0) return [];
-    // Tek rota modunda tüm data'yı göster (zaten 1 eleman)
     if (singleRouteId) return data;
     if (data.length <= 2) return data;
     return [
@@ -150,19 +164,19 @@ const TVQueuePage = () => {
 
           <div className="flex items-center gap-6 text-white text-right">
             <div className="flex flex-col leading-none">
-              <span className="text-xl font-mono font-black tracking-tighter">{time.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}</span>
+              <span className="text-xl font-mono font-black tracking-tighter">
+                {time.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
+              </span>
               <span className="text-xs font-bold text-[#BDB2A7] mt-1 uppercase tracking-widest">
-               {time.toLocaleDateString('tr-TR', { day: '2-digit', month: 'long', year: 'numeric' })}
-             </span>
+                {time.toLocaleDateString('tr-TR', { day: '2-digit', month: 'long', year: 'numeric' })}
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Tek rota modunda 1 sütun, normal modda 2 sütun */}
         <div className={`grid ${singleRouteId ? "grid-cols-1" : "grid-cols-2"} gap-5 flex-grow overflow-hidden`}>
           {currentRoutes.map((route, idx) => (
               <div key={`${currentIndex}-${idx}`} className="flex flex-col bg-white rounded-2xl shadow-xl border border-slate-300 overflow-hidden h-full">
-
                 <div className="bg-slate-50 p-4 shrink-0 flex justify-between items-center border-b border-slate-200 shadow-sm">
                   <div className="flex items-center gap-3">
                     <div className="bg-[#00BFA5] w-2.5 h-6 rounded-full"></div>
@@ -171,11 +185,10 @@ const TVQueuePage = () => {
                     </h2>
                   </div>
                   <span className="text-xs font-black bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-md border border-indigo-100 uppercase tracking-wide">
-                {route.vehicles.length} ARAÇ
-              </span>
+                    {route.vehicles.length} ARAÇ
+                  </span>
                 </div>
 
-                {/* Tek rota modunda 4 sütun, çift rota modunda da 4 sütun */}
                 <div className="p-2 grid grid-cols-4 gap-x-2 h-full overflow-hidden bg-[#FDFCFB]">
                   {[0, 1, 2, 3].map((colIndex) => (
                       <div key={colIndex} className="flex flex-col h-full">
