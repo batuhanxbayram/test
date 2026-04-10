@@ -1,8 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
 import apiClient from "../../api/axiosConfig";
 import { HubConnectionBuilder, HttpTransportType, LogLevel } from '@microsoft/signalr';
+import { useSearchParams } from "react-router-dom";
 
 const TVQueuePage = () => {
+  const [searchParams] = useSearchParams();
+  const singleRouteId = searchParams.get("routeId"); // null ise tüm rotalar gösterilir
+
   const [data, setData] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [time, setTime] = useState(new Date());
@@ -28,7 +32,12 @@ const TVQueuePage = () => {
   const fetchData = async () => {
     try {
       const routesRes = await apiClient.get("/admin/routes");
-      const routes = routesRes.data;
+      let routes = routesRes.data;
+
+      // Eğer tek rota ID'si varsa sadece onu filtrele
+      if (singleRouteId) {
+        routes = routes.filter(r => String(r.id) === String(singleRouteId));
+      }
 
       if (!routes || routes.length === 0) {
         setData([]);
@@ -62,7 +71,6 @@ const TVQueuePage = () => {
 
     if (connectionRef.current) return;
 
-    // BAĞLANTI AYARLARI
     const connection = new HubConnectionBuilder()
         .withUrl(HUB_URL, {
           skipNegotiation: true,
@@ -98,18 +106,21 @@ const TVQueuePage = () => {
   }, []);
 
   useEffect(() => {
-    if (data.length > 2) {
+    // Tek rota modunda veya 2 veya daha az rota varsa slayt gerekmez
+    if (!singleRouteId && data.length > 2) {
       const slideTimer = setInterval(() => {
         setCurrentIndex((prevIndex) => (prevIndex + 2) % data.length);
-      }, 20000);
+      }, 60000);
       return () => clearInterval(slideTimer);
     } else {
       setCurrentIndex(0);
     }
-  }, [data.length]);
+  }, [data.length, singleRouteId]);
 
   const getVisibleRoutes = () => {
     if (data.length === 0) return [];
+    // Tek rota modunda tüm data'yı göster (zaten 1 eleman)
+    if (singleRouteId) return data;
     if (data.length <= 2) return data;
     return [
       data[currentIndex % data.length],
@@ -134,14 +145,12 @@ const TVQueuePage = () => {
             <div className="bg-[#64748B] text-white w-12 h-12 flex items-center justify-center rounded-lg font-black text-2xl shadow-inner border border-white/10">
               75
             </div>
-            <h1 className="text-lg font-black tracking-widest text-white uppercase antialiased">SIRA TAKİP SİSTEMİ</h1>
+            <h1 className="text-lg font-black tracking-widest text-white uppercase antialiased">ARAÇ TAKİP SİSTEMİ</h1>
           </div>
 
           <div className="flex items-center gap-6 text-white text-right">
             <div className="flex flex-col leading-none">
-             <span className="text-xl font-mono font-black tracking-tighter">
-    {time.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
-            </span>
+              <span className="text-xl font-mono font-black tracking-tighter">{time.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}</span>
               <span className="text-xs font-bold text-[#BDB2A7] mt-1 uppercase tracking-widest">
                {time.toLocaleDateString('tr-TR', { day: '2-digit', month: 'long', year: 'numeric' })}
              </span>
@@ -149,7 +158,8 @@ const TVQueuePage = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-5 flex-grow overflow-hidden">
+        {/* Tek rota modunda 1 sütun, normal modda 2 sütun */}
+        <div className={`grid ${singleRouteId ? "grid-cols-1" : "grid-cols-2"} gap-5 flex-grow overflow-hidden`}>
           {currentRoutes.map((route, idx) => (
               <div key={`${currentIndex}-${idx}`} className="flex flex-col bg-white rounded-2xl shadow-xl border border-slate-300 overflow-hidden h-full">
 
@@ -165,11 +175,10 @@ const TVQueuePage = () => {
               </span>
                 </div>
 
-                {/* 🟢 KRİTİK DEĞİŞİKLİK: 3 Sütun yerine 4 Sütun (grid-cols-4) yaptık */}
+                {/* Tek rota modunda 4 sütun, çift rota modunda da 4 sütun */}
                 <div className="p-2 grid grid-cols-4 gap-x-2 h-full overflow-hidden bg-[#FDFCFB]">
                   {[0, 1, 2, 3].map((colIndex) => (
                       <div key={colIndex} className="flex flex-col h-full">
-                        {/* 🟢 34 Satır yerine 25 Satır dönecek (4x25 = 100 araç) */}
                         {Array.from({ length: 25 }).map((_, rowIndex) => {
                           const vehicleIndex = colIndex * 25 + rowIndex;
                           const vehicle = route.vehicles && route.vehicles[vehicleIndex];
@@ -178,7 +187,6 @@ const TVQueuePage = () => {
                           return (
                               <div
                                   key={vehicleIndex}
-                                  // flex-1: Tüm dikey alanı eşit bölüştürür, taşmayı 100% engeller
                                   className={`flex-1 flex items-center gap-1.5 px-2 transition-all duration-300 ${vehicle ? "bg-[#F1F5F9] rounded border border-slate-200/60 shadow-[0_1px_2px_rgba(0,0,0,0.05)]" : "border-b border-transparent"}`}
                               >
                                 <span className="text-[12px] font-black text-slate-400 w-5 text-right shrink-0 font-mono tracking-tighter">

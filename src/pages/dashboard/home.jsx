@@ -15,6 +15,7 @@ import apiClient from "@/api/axiosConfig";
 import { useMaterialTailwindController } from "@/context";
 import { VehicleQueueCard } from "@/widgets/layout/VehicleQueueCard";
 import { HubConnectionBuilder, LogLevel, HttpTransportType } from "@microsoft/signalr";
+import { useNavigate } from "react-router-dom";
 
 export function Home() {
     const [controller] = useMaterialTailwindController();
@@ -23,8 +24,11 @@ export function Home() {
     const [routesWithQueues, setRoutesWithQueues] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+
     const [activeTab, setActiveTab] = useState("");
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+    const navigate = useNavigate();
 
     const HUB_URL = "https://75ymkt.com/hubs/queue";
 
@@ -39,6 +43,7 @@ export function Home() {
             const response = await apiClient.get("/queues/all");
             const data = response.data;
             setRoutesWithQueues(data);
+
             if (data.length > 0 && !activeTab) {
                 setActiveTab(data[0].routeId);
             }
@@ -64,14 +69,17 @@ export function Home() {
 
         connection.start()
             .then(() => {
-                console.log("🟢 Home: SignalR Bağlandı!");
+                console.log("🟢 Home Sayfası: SignalR Bağlandı!");
                 connection.on("ReceiveQueueUpdate", () => {
+                    console.log("🔔 Güncelleme geldi!");
                     fetchAllQueues();
                 });
             })
-            .catch(err => console.error("🔴 SignalR Hatası:", err));
+            .catch(err => console.error("🔴 SignalR Bağlantı Hatası:", err));
 
-        return () => connection.stop();
+        return () => {
+            connection.stop();
+        };
     }, []);
 
     const handleNextVehicle = async (routeId) => {
@@ -83,15 +91,8 @@ export function Home() {
         }
     };
 
-    if (loading) return (
-        <div className="flex justify-center items-center h-screen">
-            <Spinner className="h-16 w-16" />
-        </div>
-    );
-
-    if (error) return (
-        <Typography color="red" className="mt-12 text-center">{error}</Typography>
-    );
+    if (loading) return <div className="flex justify-center items-center h-screen"><Spinner className="h-16 w-16" /></div>;
+    if (error) return <Typography color="red" className="mt-12 text-center">{error}</Typography>;
 
     const displayedRoutes = isMobile
         ? routesWithQueues.filter(r => String(r.routeId) === String(activeTab))
@@ -100,21 +101,6 @@ export function Home() {
     return (
         <div className="mt-6 md:mt-12">
 
-            {/* TV Ekranı Butonu */}
-            {userRole !== 'user' && (
-                <div className="flex justify-end mb-4">
-                    <Button
-                        size="sm"
-                        className="flex items-center gap-2 bg-gray-800 text-white hover:bg-gray-900 normal-case"
-                        onClick={() => window.open("/tv/monitor", "_blank")}
-                    >
-                        <TvIcon className="h-4 w-4" />
-                        TV Ekranı
-                    </Button>
-                </div>
-                )}
-
-            {/* Mobil sekme menüsü */}
             {isMobile && routesWithQueues.length > 0 && (
                 <div className="mb-6 w-full overflow-x-auto pb-2 scroll-smooth" style={{ WebkitOverflowScrolling: "touch" }}>
                     <Tabs value={activeTab} className="w-max min-w-full">
@@ -139,7 +125,6 @@ export function Home() {
                 </div>
             )}
 
-            {/* Liste */}
             <div className={`
                 flex flex-col gap-6 pb-4
                 ${!isMobile ? "md:flex-row md:h-[calc(100vh-80px)] md:overflow-x-auto md:overflow-y-hidden" : ""}
@@ -159,7 +144,20 @@ export function Home() {
                                             {activeVehicles.length} Araç
                                         </Typography>
                                     </div>
+                                    <div className="ml-4 flex-shrink-0 flex items-center gap-2">
+                                        {/* TV Butonu - Sadece admin görür */}
+                                        {userRole === 'admin' && (
+                                            <Button
+                                                size="sm"
+                                                className="flex items-center gap-1.5 bg-white/10 border border-white/30 text-white hover:bg-white/20 backdrop-blur-sm shadow-none px-3 py-1.5"
+                                                onClick={() => navigate(`/tv/monitor?routeId=${route.routeId}`)}
+                                            >
+                                                <TvIcon className="h-4 w-4" />
+                                                <span className="text-xs font-semibold tracking-wide">TV</span>
+                                            </Button>
+                                        )}
 
+                                    </div>
                                 </CardHeader>
                                 <CardBody className="p-4 pt-0 flex-grow overflow-y-auto max-h-[60vh] md:max-h-full">
                                     {activeVehicles.length > 0 ? (
