@@ -129,6 +129,20 @@ export function Home() {
 
     return (
         <div className="mt-6 md:mt-12">
+            <div className="flex justify-end mb-4">
+                {userRole === 'admin' && (
+                    <Button
+                        size="sm"
+                        className="flex items-center gap-2 bg-gray-800 text-white hover:bg-gray-700"
+                        onClick={() => navigate('/tv/monitor')}
+                    >
+                        <TvIcon className="h-4 w-4" />
+                        TV Ekranı
+                    </Button>
+                )}
+            </div>
+
+
             {isMobile && routesWithQueues.length > 0 && (
                 <div className="mb-6 w-full overflow-x-auto pb-2 scroll-smooth" style={{ WebkitOverflowScrolling: "touch" }}>
                     <Tabs value={activeTab} className="w-max min-w-full">
