@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import {
     Typography, Card, CardHeader, CardBody,
-    Button, Select, Option, List, ListItem,
+    Button, Select, Option, List, ListItem, Input
 } from "@material-tailwind/react";
 import {
     DndContext,
@@ -24,8 +24,14 @@ import { toast } from "react-toastify";
 
 const HUB_URL = "https://75ymkt.com/hubs/queue";
 
+// --- Plaka Normalize Yardımcı Fonksiyonu ---
+const normalizePlate = (plate) => {
+    if (!plate) return "";
+    return plate.replace(/\s+/g, "").toUpperCase();
+};
+
 // --- Sürüklenebilir Satır ---
-function SortableRow({ vehicle, index, onRemove }) {
+function SortableRow({ vehicle, index, onRemove, isHighlighted }) {
     const {
         attributes,
         listeners,
@@ -42,14 +48,16 @@ function SortableRow({ vehicle, index, onRemove }) {
 
     const style = {
         transform: transformStr,
-        transition: transition ?? undefined,
+        // Renk geçişinin yumuşak olması için transition eklendi
+        transition: transition ? `${transition}, background-color 0.5s ease` : "background-color 0.5s ease",
         opacity: isDragging ? 0.5 : 1,
-        backgroundColor: isDragging ? "#eff6ff" : "white",
+        // Gri parlama veya sürükleme rengi
+        backgroundColor: isHighlighted ? "#e2e8f0" : (isDragging ? "#eff6ff" : "white"),
         position: "relative",
     };
 
     return (
-        <tr ref={setNodeRef} style={style}>
+        <tr id={`vehicle-row-${vehicle.id}`} ref={setNodeRef} style={style}>
             <td className="py-3 px-3 border-b w-10">
                 <div
                     {...attributes}
@@ -100,6 +108,10 @@ export function QueueManagementPage() {
     const [loadingQueue, setLoadingQueue] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
 
+    // Arama için eklendi
+    const [searchQuery, setSearchQuery] = useState("");
+    const [highlightedId, setHighlightedId] = useState(null);
+
     const sensors = useSensors(
         useSensor(PointerSensor, {
             // Yanlışlıkla sürüklemeyi önlemek için 8px eşik
@@ -149,7 +161,33 @@ export function QueueManagementPage() {
     useEffect(() => {
         fetchQueueData();
         setVehicleToAdd("");
+        setSearchQuery(""); // Güzergah değişince aramayı sıfırla
+        setHighlightedId(null);
     }, [selectedRoute]);
+
+    // --- Arama Fonksiyonları Başlangıç ---
+    const handleSearch = () => {
+        const query = normalizePlate(searchQuery);
+        if (!query) return;
+
+        const found = queuedVehicles.find(v => normalizePlate(v.licensePlate).includes(query));
+        if (found) {
+            setHighlightedId(found.id);
+            setTimeout(() => {
+                // dnd-kit ref'leri ile çakışmamak için id bazlı scroll kullanıldı
+                const el = document.getElementById(`vehicle-row-${found.id}`);
+                if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+            }, 50);
+            setTimeout(() => setHighlightedId(null), 3000); // 3 saniye sonra parlamayı kaldır
+        } else {
+            toast.error(`"${searchQuery}" plakalı araç sırada bulunamadı.`, { autoClose: 2000 });
+        }
+    };
+
+    const handleKeyDown = (e) => {
+        if (e.key === "Enter") handleSearch();
+    };
+    // --- Arama Fonksiyonları Bitiş ---
 
     const handleDragEnd = async (event) => {
         const { active, over } = event;
@@ -245,28 +283,52 @@ export function QueueManagementPage() {
                             </div>
                         ) : (
                             <div>
-                                <div className="flex items-center justify-between mb-4">
+                                <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4">
                                     <Typography variant="h6" color="blue-gray">
                                         {selectedRoute.routeName} — {queuedVehicles.length} Araç
                                     </Typography>
-                                    {isSaving && (
-                                        <Typography variant="small" color="blue" className="animate-pulse font-semibold">
-                                            ⏳ Kaydediliyor...
-                                        </Typography>
-                                    )}
+
+                                    <div className="flex items-center gap-3">
+                                        {isSaving && (
+                                            <Typography variant="small" color="blue" className="animate-pulse font-semibold">
+                                                ⏳ Kaydediliyor...
+                                            </Typography>
+                                        )}
+                                        <div className="w-56">
+                                            <Input
+                                                label="Sırada Plaka Ara"
+                                                value={searchQuery}
+                                                onChange={(e) => setSearchQuery(e.target.value)}
+                                                onKeyDown={handleKeyDown}
+                                                icon={
+                                                    <svg
+                                                        xmlns="http://www.w3.org/2000/svg"
+                                                        className="h-5 w-5 cursor-pointer text-blue-gray-500 hover:text-blue-500 transition-colors"
+                                                        fill="none"
+                                                        viewBox="0 0 24 24"
+                                                        stroke="currentColor"
+                                                        strokeWidth={2}
+                                                        onClick={handleSearch}
+                                                    >
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                                    </svg>
+                                                }
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <div className="overflow-x-auto border rounded-lg mb-8">
+                                <div className="overflow-x-auto border rounded-lg mb-8 max-h-[600px] overflow-y-auto">
                                     <DndContext
                                         sensors={sensors}
                                         collisionDetection={closestCenter}
                                         onDragEnd={handleDragEnd}
                                     >
                                         <table className="w-full min-w-[540px] table-auto">
-                                            <thead>
+                                            <thead className="sticky top-0 bg-white z-10">
                                             <tr>
                                                 {["", "Sıra", "Plaka", "Şoför", "İşlem"].map((h) => (
-                                                    <th key={h} className="border-b border-blue-gray-50 py-3 px-5 text-left">
+                                                    <th key={h} className="border-b border-blue-gray-50 py-3 px-5 text-left bg-white">
                                                         <Typography variant="small" className="font-bold uppercase text-blue-gray-400">
                                                             {h}
                                                         </Typography>
@@ -298,6 +360,7 @@ export function QueueManagementPage() {
                                                             vehicle={vehicle}
                                                             index={index}
                                                             onRemove={handleRemoveVehicleFromQueue}
+                                                            isHighlighted={highlightedId === vehicle.id}
                                                         />
                                                     ))
                                                 )}

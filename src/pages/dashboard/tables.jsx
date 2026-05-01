@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Card, CardHeader, CardBody, Typography, Button, Chip, Tooltip
 } from "@material-tailwind/react";
 import {
-  ExclamationTriangleIcon, ArchiveBoxXMarkIcon, EyeSlashIcon
+  ExclamationTriangleIcon, ArchiveBoxXMarkIcon, EyeSlashIcon, MagnifyingGlassIcon
 } from "@heroicons/react/24/solid";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -19,6 +19,10 @@ const toTitleCase = (str) =>
 export function Tables() {
   const [vehicles, setVehicles] = useState([]);
   const [idleVehicles, setIdleVehicles] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [highlightedId, setHighlightedId] = useState(null);
+
+  const rowRefs = useRef({});
 
   const [addModalOpen, setAddModalOpen] = useState(false);
   const handleOpenAddModal = () => setAddModalOpen(!addModalOpen);
@@ -115,6 +119,29 @@ export function Tables() {
     }
   };
 
+  const normalizePlate = (plate) => (plate || "").replace(/\s/g, "").toUpperCase();
+
+  const handleSearch = () => {
+    const query = normalizePlate(searchQuery);
+    if (!query) return;
+
+    const found = vehicles.find(v => normalizePlate(v.licensePlate).includes(query));
+    if (found) {
+      setHighlightedId(found.id);
+      setTimeout(() => {
+        const el = rowRefs.current[found.id];
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 50);
+      setTimeout(() => setHighlightedId(null), 3000);
+    } else {
+      toast.error(`"${searchQuery}" plakalı araç bulunamadı.`, { autoClose: 2000 });
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") handleSearch();
+  };
+
   return (
       <>
         <ToastContainer />
@@ -141,13 +168,45 @@ export function Tables() {
           <Card>
             <CardHeader variant="gradient" color="gray" className="mb-4 p-6 flex justify-between items-center">
               <Typography variant="h6" color="white">Araç Listesi</Typography>
-              <Button
-                  size="sm" color="white" variant="text"
-                  className="flex items-center gap-2 border border-white/20 hover:bg-white/10"
-                  onClick={handleOpenAddModal}
-              >
-                + Yeni Ekle
-              </Button>
+              <div className="flex items-center gap-3">
+                {/* PLAKA ARAMA */}
+                <div className="relative">
+                  <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-white/60 pointer-events-none" />
+                  <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={e => {
+                        setSearchQuery(e.target.value.toUpperCase());
+                        setHighlightedId(null);
+                      }}
+                      onKeyDown={handleKeyDown}
+                      placeholder="Plaka ara..."
+                      className="pl-8 pr-7 py-1.5 text-sm rounded-lg border border-white/20 bg-white/10 text-white placeholder-white/50 focus:outline-none focus:border-white/50 focus:bg-white/20 transition-colors w-44 font-mono"
+                  />
+                  {searchQuery && (
+                      <button
+                          onClick={() => { setSearchQuery(""); setHighlightedId(null); }}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-white/60 hover:text-white text-xs font-bold leading-none"
+                      >
+                        ✕
+                      </button>
+                  )}
+                </div>
+                <Button
+                    size="sm" color="white" variant="text"
+                    className="flex items-center gap-2 border border-white/20 hover:bg-white/10"
+                    onClick={handleSearch}
+                >
+                  Ara
+                </Button>
+                <Button
+                    size="sm" color="white" variant="text"
+                    className="flex items-center gap-2 border border-white/20 hover:bg-white/10"
+                    onClick={handleOpenAddModal}
+                >
+                  + Yeni Ekle
+                </Button>
+              </div>
             </CardHeader>
             <CardBody className="overflow-x-scroll px-0 pt-0 pb-2">
               <table className="w-full min-w-[860px] table-auto">
@@ -167,7 +226,8 @@ export function Tables() {
                 </thead>
                 <tbody>
                 {vehicles.map((vehicle, key) => {
-                  const className = `py-3 px-5 ${key === vehicles.length - 1 ? "" : "border-b border-blue-gray-50"}`;
+                  const isHighlighted = vehicle.id === highlightedId;
+                  const rowClass = `py-3 px-5 ${key === vehicles.length - 1 ? "" : "border-b border-blue-gray-50"}`;
                   const displayName = vehicle.userFullName && vehicle.userFullName !== "Atanmadı"
                       ? toTitleCase(vehicle.userFullName)
                       : vehicle.driverName && vehicle.driverName !== "Atanmadı"
@@ -175,13 +235,25 @@ export function Tables() {
                           : null;
 
                   return (
-                      <tr key={vehicle.id} className="hover:bg-blue-gray-50/50 transition-colors">
-                        <td className={className}>
-                          <Typography className="text-sm font-semibold text-blue-gray-600">
-                            {vehicle.licensePlate}
-                          </Typography>
+                      <tr
+                          key={vehicle.id}
+                          ref={el => rowRefs.current[vehicle.id] = el}
+                          className={`transition-colors duration-300 ${
+                              isHighlighted ? "bg-blue-gray-50" : "hover:bg-blue-gray-50/50"
+                          }`}
+                      >
+                        <td className={rowClass}>
+                          <div className="flex items-center gap-2">
+                            {/* Subtle gösterge: sadece bulununca küçük nokta */}
+                            {isHighlighted && (
+                                <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-gray-500 flex-shrink-0" />
+                            )}
+                            <Typography className="text-sm font-semibold text-blue-gray-600">
+                              {vehicle.licensePlate}
+                            </Typography>
+                          </div>
                         </td>
-                        <td className={className}>
+                        <td className={rowClass}>
                           {displayName ? (
                               <Typography className="text-xs font-normal text-blue-gray-700">
                                 {displayName}
@@ -192,12 +264,12 @@ export function Tables() {
                               </Typography>
                           )}
                         </td>
-                        <td className={className}>
+                        <td className={rowClass}>
                           <Typography className="text-xs font-normal text-blue-gray-500">
                             {vehicle.phoneNumber || "-"}
                           </Typography>
                         </td>
-                        <td className={className}>
+                        <td className={rowClass}>
                           <Chip
                               variant="ghost" size="sm"
                               value={vehicle.isActive ? "Aktif" : "Pasif"}
@@ -205,7 +277,7 @@ export function Tables() {
                               className="w-max font-bold"
                           />
                         </td>
-                        <td className={`${className} text-right`}>
+                        <td className={`${rowClass} text-right`}>
                           <div className="flex justify-end items-center gap-1 flex-wrap">
                             <Button size="sm" variant="text" color="blue" onClick={() => handleOpenEditModal(vehicle)}>
                               Düzenle
@@ -269,7 +341,7 @@ export function Tables() {
                     </thead>
                     <tbody>
                     {idleVehicles.map((vehicle, key) => {
-                      const className = `py-3 px-5 ${key === idleVehicles.length - 1 ? "" : "border-b border-blue-gray-50"}`;
+                      const rowClass = `py-3 px-5 ${key === idleVehicles.length - 1 ? "" : "border-b border-blue-gray-50"}`;
                       const displayName = vehicle.userFullName && vehicle.userFullName !== "Atanmadı"
                           ? toTitleCase(vehicle.userFullName)
                           : vehicle.driverName && vehicle.driverName !== "Atanmadı"
@@ -278,24 +350,24 @@ export function Tables() {
 
                       return (
                           <tr key={`idle-${vehicle.id}`} className="hover:bg-blue-gray-50/50 transition-colors">
-                            <td className={className}>
+                            <td className={rowClass}>
                               <Typography className="text-sm font-semibold text-blue-gray-600">
                                 {vehicle.licensePlate}
                               </Typography>
                             </td>
-                            <td className={className}>
+                            <td className={rowClass}>
                               {displayName ? (
                                   <Typography className="text-xs font-normal text-blue-gray-700">{displayName}</Typography>
                               ) : (
                                   <Typography className="text-xs font-normal text-blue-gray-300 italic">Atanmadı</Typography>
                               )}
                             </td>
-                            <td className={className}>
+                            <td className={rowClass}>
                               <Typography className="text-xs font-normal text-blue-gray-500">
                                 {vehicle.phoneNumber || "-"}
                               </Typography>
                             </td>
-                            <td className={`${className} text-right`}>
+                            <td className={`${rowClass} text-right`}>
                               <div className="flex justify-end items-center gap-2">
                                 <Tooltip content="Aracı Pasife Al">
                                   <Button size="sm" color="red" variant="text" className="flex items-center gap-2" onClick={() => handleSetPassive(vehicle)}>
