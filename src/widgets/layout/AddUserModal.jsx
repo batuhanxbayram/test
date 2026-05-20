@@ -1,18 +1,18 @@
 import React, { useState } from "react";
 import {
-    Button, Dialog, DialogHeader, DialogBody, DialogFooter, Input, Typography,
+    Button, Dialog, DialogHeader, DialogBody, DialogFooter, Input, Typography, Select, Option,
 } from "@material-tailwind/react";
 import { toast } from "react-toastify";
 import apiClient from "../../api/axiosConfig.js";
 
 export function AddUserModal({ open, handleOpen, onUserAdded }) {
     const [formData, setFormData] = useState({
-        fullName: "", userName: "", password: "", confirmPassword: "", phoneNumber: "",
+        fullName: "", userName: "", password: "", confirmPassword: "", phoneNumber: "", role: "User",
     });
     const [error, setError] = useState("");
 
     const clearForm = () => {
-        setFormData({ fullName: "", userName: "", password: "", confirmPassword: "", phoneNumber: "" });
+        setFormData({ fullName: "", userName: "", password: "", confirmPassword: "", phoneNumber: "", role: "User" });
         setError("");
     };
 
@@ -40,13 +40,14 @@ export function AddUserModal({ open, handleOpen, onUserAdded }) {
                 password: formData.password,
                 confirmPassword: formData.confirmPassword,
                 phoneNumber: formData.phoneNumber?.trim() || null,
+                roles: [formData.role || "User"],
             });
             onUserAdded();
             handleClose();
         } catch (err) {
             const msg = err.response?.status === 409
                 ? `'${formData.userName}' zaten kayıtlı.`
-                : (err.response?.data?.message || "Kullanıcı eklenirken hata oluştu.");
+                : (err.response?.data?.message || err.response?.data || "Kullanıcı eklenirken hata oluştu.");
             setError(msg); toast.error(msg);
         }
     };
@@ -59,6 +60,11 @@ export function AddUserModal({ open, handleOpen, onUserAdded }) {
                 <Input label="Tam Ad *" name="fullName" value={formData.fullName} onChange={handleChange} autoComplete="off" />
                 <Input label="Kullanıcı Adı *" name="userName" value={formData.userName} onChange={handleChange} autoComplete="off" />
                 <Input label="Telefon Numarası" name="phoneNumber" value={formData.phoneNumber} onChange={handleChange} placeholder="5551234567" />
+                <Select label="Rol" value={formData.role} onChange={(val) => setFormData(prev => ({ ...prev, role: val }))}>
+                    <Option value="User">Kullanıcı</Option>
+                    <Option value="Muhasebeci">Muhasebeci</Option>
+                    <Option value="Admin">Admin</Option>
+                </Select>
                 <Input label="Şifre *" name="password" type="password" value={formData.password} onChange={handleChange} autoComplete="new-password" />
                 <Input label="Şifre Tekrar *" name="confirmPassword" type="password" value={formData.confirmPassword} onChange={handleChange} autoComplete="new-password" />
             </DialogBody>
