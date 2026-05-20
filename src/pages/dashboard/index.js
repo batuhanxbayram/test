@@ -5,6 +5,8 @@ export * from "@/pages/dashboard/notifications";
 export * from "@/pages/dashboard/queuemanagementpage.jsx";
 export * from "@/pages/dashboard/dispatch";
 export * from "@/pages/dashboard/myprofile";
+export * from "@/pages/dashboard/accounting";
+export * from "@/pages/dashboard/my-accounting";
 
 
 
