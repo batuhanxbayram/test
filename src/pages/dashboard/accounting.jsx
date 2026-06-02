@@ -44,6 +44,10 @@ const money = (value) =>
 const typeLabel = (type) =>
   recordTypes.find((item) => item.value === String(type))?.label || "Kayit";
 
+const selectMenuProps = {
+  className: "z-[9999] max-h-72",
+};
+
 export function AccountingPage() {
   const [users, setUsers] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState("");
@@ -217,11 +221,11 @@ export function AccountingPage() {
 
   return (
     <div className="mt-12 mb-8 flex flex-col gap-8">
-      <Card>
+      <Card className="relative z-30 overflow-visible">
         <CardHeader
           variant="gradient"
           color="gray"
-          className="mb-4 flex flex-col gap-4 p-6 md:flex-row md:items-center md:justify-between"
+          className="relative z-40 mb-4 flex flex-col gap-4 overflow-visible p-6 md:flex-row md:items-center md:justify-between"
         >
           <div>
             <Typography variant="h6" color="white">
@@ -236,6 +240,8 @@ export function AccountingPage() {
               label="Kullanici Sec"
               value={selectedUserId}
               onChange={(val) => setSelectedUserId(val)}
+              menuProps={selectMenuProps}
+              containerProps={{ className: "relative z-[9999]" }}
             >
               {users.map((user) => (
                 <Option key={user.id} value={String(user.id)}>
@@ -286,7 +292,7 @@ export function AccountingPage() {
         </CardBody>
       </Card>
 
-      <Card>
+      <Card className="relative z-20 overflow-visible">
         <CardHeader variant="gradient" color="gray" className="mb-4 p-6">
           <Typography variant="h6" color="white">
             {editingId ? "Cari Kayit Duzenle" : "Yeni Cari Kayit"}
@@ -294,7 +300,12 @@ export function AccountingPage() {
         </CardHeader>
         <CardBody className="grid gap-4 md:grid-cols-4">
           {selectedUser?.vehicles?.length > 1 && (
-            <Select label="Arac" value={selectedVehicleId} onChange={(val) => setSelectedVehicleId(val)}>
+            <Select
+              label="Arac"
+              value={selectedVehicleId}
+              onChange={(val) => setSelectedVehicleId(val)}
+              menuProps={selectMenuProps}
+            >
               {selectedUser.vehicles.map((vehicle) => (
                 <Option key={vehicle.id} value={String(vehicle.id)}>
                   {vehicle.licensePlate}
@@ -308,7 +319,12 @@ export function AccountingPage() {
             value={formData.date}
             onChange={(e) => handleChange("date", e.target.value)}
           />
-          <Select label="Tip" value={formData.type} onChange={(val) => handleChange("type", val)}>
+          <Select
+            label="Tip"
+            value={formData.type}
+            onChange={(val) => handleChange("type", val)}
+            menuProps={selectMenuProps}
+          >
             {recordTypes.map((type) => (
               <Option key={type.value} value={type.value}>
                 {type.label}
@@ -319,6 +335,7 @@ export function AccountingPage() {
             label="Kategori"
             value={formData.category}
             onChange={(val) => handleChange("category", val)}
+            menuProps={selectMenuProps}
           >
             {defaultCategories.map((category) => (
               <Option key={category} value={category}>
