@@ -50,7 +50,7 @@ export const routes = [
       },
       {
         icon: <ClipboardDocumentListIcon {...icon} />,
-        name: "Cari Bilgilerim",
+        name: "Cari İşlemlerim",
         path: "/cari-bilgilerim",
         element: <MyAccounting />,
         roles: ['user'],
