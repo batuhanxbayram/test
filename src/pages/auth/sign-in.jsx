@@ -14,6 +14,12 @@ export function SignIn() {
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
+  const getStartPage = (role) => {
+    if (role === "muhasebeci") return "/anasayfa/cari-hesaplar";
+    if (role === "user") return "/anasayfa/cari-bilgilerim";
+    return "/anasayfa/arac-siralari";
+  };
+
   const handleSignIn = async () => {
     const loginData = {
       username: username,
@@ -32,7 +38,8 @@ export function SignIn() {
         console.log("Giriş Başarılı!");
         const decodedToken = jwtDecode(token);
         const userRoleClaim = decodedToken.role || decodedToken["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
-        const userRole = userRoleClaim ? userRoleClaim.toLowerCase() : null;
+        const firstRole = Array.isArray(userRoleClaim) ? userRoleClaim[0] : userRoleClaim;
+        const userRole = firstRole ? firstRole.toLowerCase() : null;
         console.log("Kullanıcı Rolü:", userRole);
 
         if (userRole) {
@@ -40,7 +47,7 @@ export function SignIn() {
           localStorage.setItem("userRole", userRole);
         }
 
-        navigate("/anasayfa/arac-siralari");
+        navigate(getStartPage(userRole));
       } else {
         alert("Giriş başarılı ancak sunucudan geçerli bir token alınamadı.");
       }

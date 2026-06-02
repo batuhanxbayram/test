@@ -7,6 +7,8 @@ import {
   QueueListIcon,
   PaperAirplaneIcon,
   ServerStackIcon,
+  BanknotesIcon,
+  ClipboardDocumentListIcon,
 } from "@heroicons/react/24/solid";
 
 import {
@@ -17,6 +19,8 @@ import {
   QueueManagementPage,
   DispatchPage,
   MyProfile,
+  AccountingPage,
+  MyAccounting,
 } from "@/pages/dashboard";
 
 import { SignIn } from "@/pages/auth";
@@ -36,6 +40,20 @@ export const routes = [
         name: "Araç Sıraları",
         path: "/arac-siralari",
         element: <Home />,
+      },
+      {
+        icon: <BanknotesIcon {...icon} />,
+        name: "Cari Hesaplar",
+        path: "/cari-hesaplar",
+        element: <AccountingPage />,
+        roles: ['admin', 'muhasebeci'],
+      },
+      {
+        icon: <ClipboardDocumentListIcon {...icon} />,
+        name: "Cari İşlemlerim",
+        path: "/cari-bilgilerim",
+        element: <MyAccounting />,
+        roles: ['user'],
       },
       {
         icon: <QueueListIcon {...icon} />,
