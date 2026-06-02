@@ -46,7 +46,7 @@ export const routes = [
         name: "Cari Hesaplar",
         path: "/cari-hesaplar",
         element: <AccountingPage />,
-        roles: ['admin', 'muhasebeci'],
+        roles: ['muhasebeci'],
       },
       {
         icon: <ClipboardDocumentListIcon {...icon} />,
