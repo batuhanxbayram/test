@@ -12,26 +12,35 @@ import {
 import { toast } from "react-toastify";
 import apiClient from "@/api/axiosConfig";
 
-const recordTypes = [
-  { value: "1", label: "Gelir" },
-  { value: "2", label: "Gider" },
-  { value: "3", label: "Odeme" },
-  { value: "4", label: "Devir" },
-  { value: "5", label: "Duzeltme" },
+const months = [
+  { value: "1", label: "Ocak" },
+  { value: "2", label: "Subat" },
+  { value: "3", label: "Mart" },
+  { value: "4", label: "Nisan" },
+  { value: "5", label: "Mayis" },
+  { value: "6", label: "Haziran" },
+  { value: "7", label: "Temmuz" },
+  { value: "8", label: "Agustos" },
+  { value: "9", label: "Eylul" },
+  { value: "10", label: "Ekim" },
+  { value: "11", label: "Kasim" },
+  { value: "12", label: "Aralik" },
 ];
 
-const defaultCategories = ["Tasima", "Mazot", "Aidat", "Odeme", "Yol Belgesi", "Diger"];
+const currentDate = new Date();
 
 const emptyForm = {
-  date: new Date().toISOString().slice(0, 10),
-  type: "1",
-  category: "Tasima",
-  company: "",
-  waybillNo: "",
+  vehicleId: "",
+  periodMonth: String(currentDate.getMonth() + 1),
+  periodYear: String(currentDate.getFullYear()),
+  previousBalance: "",
+  incomeAmount: "",
+  expenseAmount: "",
   description: "",
-  quantityKg: "",
-  unitPrice: "",
-  amount: "",
+};
+
+const selectMenuProps = {
+  className: "z-[9999] max-h-72",
 };
 
 const money = (value) =>
@@ -41,206 +50,200 @@ const money = (value) =>
     minimumFractionDigits: 2,
   });
 
-const typeLabel = (type) =>
-  recordTypes.find((item) => item.value === String(type))?.label || "Kayit";
+const toNumber = (value) => {
+  if (value === "" || value === null || value === undefined) return 0;
+  return Number(String(value).replace(",", ".")) || 0;
+};
 
 export function AccountingPage() {
   const [users, setUsers] = useState([]);
-  const [selectedUserId, setSelectedUserId] = useState("");
-  const [selectedVehicleId, setSelectedVehicleId] = useState("");
-  const [records, setRecords] = useState([]);
-  const [summary, setSummary] = useState(null);
-  const [monthlySummaries, setMonthlySummaries] = useState([]);
+  const [summaries, setSummaries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState(emptyForm);
   const [filters, setFilters] = useState({
-    startDate: "",
-    endDate: "",
-    category: "",
+    vehicleId: "",
+    periodMonth: "",
+    periodYear: "",
   });
 
-  const selectedUser = useMemo(
-    () => users.find((user) => String(user.id) === String(selectedUserId)),
-    [users, selectedUserId]
+  const driverOptions = useMemo(
+    () =>
+      users.flatMap((user) =>
+        (user.vehicles || []).map((vehicle) => ({
+          userId: user.id,
+          userFullName: user.fullName,
+          vehicleId: String(vehicle.id),
+          licensePlate: vehicle.licensePlate,
+          label: `${user.fullName} - ${vehicle.licensePlate}`,
+        }))
+      ),
+    [users]
   );
+
+  const selectedDriver = useMemo(
+    () => driverOptions.find((item) => item.vehicleId === String(formData.vehicleId)),
+    [driverOptions, formData.vehicleId]
+  );
+
+  const totalBalance =
+    toNumber(formData.previousBalance) + toNumber(formData.incomeAmount) - toNumber(formData.expenseAmount);
 
   const queryString = () => {
     const params = new URLSearchParams();
-    if (filters.startDate) params.append("startDate", filters.startDate);
-    if (filters.endDate) params.append("endDate", filters.endDate);
-    if (filters.category) params.append("category", filters.category);
+    if (filters.vehicleId) params.append("vehicleId", filters.vehicleId);
+    if (filters.periodMonth) params.append("periodMonth", filters.periodMonth);
+    if (filters.periodYear) params.append("periodYear", filters.periodYear);
     const query = params.toString();
     return query ? `?${query}` : "";
   };
 
   const fetchUsers = async () => {
-    try {
-      const response = await apiClient.get("/accounting/users");
-      const data = response.data || [];
-      setUsers(data);
+    const response = await apiClient.get("/accounting/users");
+    const data = response.data || [];
+    setUsers(data);
 
-      if (data.length > 0 && !selectedUserId) {
-        setSelectedUserId(String(data[0].id));
-      }
+    const firstVehicle = data.flatMap((user) => user.vehicles || [])[0];
+    if (firstVehicle && !formData.vehicleId) {
+      setFormData((prev) => ({ ...prev, vehicleId: String(firstVehicle.id) }));
+    }
+  };
+
+  const fetchSummaries = async () => {
+    const response = await apiClient.get(`/accounting/monthly-summaries${queryString()}`);
+    setSummaries(response.data || []);
+  };
+
+  const loadPage = async () => {
+    try {
+      await Promise.all([fetchUsers(), fetchSummaries()]);
     } catch (err) {
       console.error(err);
-      toast.error("Kullanici listesi yuklenemedi.");
+      toast.error("Cari ozet bilgileri yuklenemedi.");
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchAccountingData = async () => {
-    if (!selectedUserId) return;
-
-    try {
-      const query = queryString();
-      const [recordsRes, summaryRes, monthlyRes] = await Promise.all([
-        apiClient.get(`/accounting/users/${selectedUserId}/records${query}`),
-        apiClient.get(`/accounting/users/${selectedUserId}/summary${query}`),
-        apiClient.get(`/accounting/users/${selectedUserId}/monthly-summary${query}`),
-      ]);
-
-      setRecords(recordsRes.data || []);
-      setSummary(summaryRes.data || null);
-      setMonthlySummaries(monthlyRes.data || []);
-    } catch (err) {
-      console.error(err);
-      toast.error("Cari bilgiler yuklenemedi.");
-    }
-  };
-
   useEffect(() => {
-    fetchUsers();
+    loadPage();
   }, []);
-
-  useEffect(() => {
-    const firstVehicleId = selectedUser?.vehicles?.[0]?.id;
-    setSelectedVehicleId(firstVehicleId ? String(firstVehicleId) : "");
-    setEditingId(null);
-    setFormData(emptyForm);
-    fetchAccountingData();
-  }, [selectedUserId]);
 
   const handleChange = (name, value) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const toNullableNumber = (value) => {
-    if (value === "" || value === null || value === undefined) return null;
-    return Number(String(value).replace(",", "."));
+  const resetForm = () => {
+    setEditingId(null);
+    setFormData((prev) => ({
+      ...emptyForm,
+      vehicleId: prev.vehicleId || driverOptions[0]?.vehicleId || "",
+    }));
   };
 
   const buildPayload = () => ({
-    vehicleId: selectedVehicleId ? Number(selectedVehicleId) : null,
-    date: formData.date,
-    type: Number(formData.type),
-    category: formData.category,
-    company: formData.company?.trim() || null,
-    waybillNo: formData.waybillNo?.trim() || null,
+    userId: selectedDriver?.userId || null,
+    vehicleId: Number(formData.vehicleId),
+    periodMonth: Number(formData.periodMonth),
+    periodYear: Number(formData.periodYear),
+    previousBalance: toNumber(formData.previousBalance),
+    incomeAmount: toNumber(formData.incomeAmount),
+    expenseAmount: toNumber(formData.expenseAmount),
     description: formData.description?.trim() || null,
-    quantityKg: toNullableNumber(formData.quantityKg),
-    unitPrice: toNullableNumber(formData.unitPrice),
-    amount: toNullableNumber(formData.amount),
   });
 
   const handleSubmit = async () => {
-    if (!selectedUserId) {
-      toast.error("Once kullanici seciniz.");
+    if (!formData.vehicleId) {
+      toast.error("Once sofor/plaka seciniz.");
       return;
     }
 
-    if (!formData.date || !formData.category) {
-      toast.error("Tarih ve kategori zorunludur.");
+    if (!formData.periodMonth || !formData.periodYear) {
+      toast.error("Ay ve yil zorunludur.");
       return;
     }
 
     setSaving(true);
     try {
       if (editingId) {
-        await apiClient.put(`/accounting/records/${editingId}`, buildPayload());
-        toast.success("Cari kayit guncellendi.");
+        await apiClient.put(`/accounting/monthly-summaries/${editingId}`, buildPayload());
+        toast.success("Cari ozet guncellendi.");
       } else {
-        await apiClient.post(`/accounting/users/${selectedUserId}/records`, buildPayload());
-        toast.success("Cari kayit eklendi.");
+        await apiClient.post("/accounting/monthly-summaries", buildPayload());
+        toast.success("Cari ozet kaydedildi.");
       }
 
-      setEditingId(null);
-      setFormData(emptyForm);
-      await fetchAccountingData();
+      resetForm();
+      await fetchSummaries();
     } catch (err) {
       console.error(err);
-      toast.error(err.response?.data?.message || "Kayit islemi basarisiz oldu.");
+      toast.error(err.response?.data?.message || "Cari ozet kaydedilemedi.");
     } finally {
       setSaving(false);
     }
   };
 
-  const handleEdit = (record) => {
-    setEditingId(record.id);
-    setSelectedVehicleId(String(record.vehicleId));
+  const handleEdit = (summary) => {
+    setEditingId(summary.id);
     setFormData({
-      date: record.date?.slice(0, 10) || emptyForm.date,
-      type: String(record.type),
-      category: record.category || "Diger",
-      company: record.company || "",
-      waybillNo: record.waybillNo || "",
-      description: record.description || "",
-      quantityKg: record.quantityKg ?? "",
-      unitPrice: record.unitPrice ?? "",
-      amount:
-        record.quantityKg && record.unitPrice
-          ? ""
-          : Math.abs(record.netAmount || record.balanceEffect || 0),
+      vehicleId: String(summary.vehicleId || ""),
+      periodMonth: String(summary.periodMonth),
+      periodYear: String(summary.periodYear),
+      previousBalance: summary.previousBalance ?? "",
+      incomeAmount: summary.incomeAmount ?? "",
+      expenseAmount: summary.expenseAmount ?? "",
+      description: summary.description || "",
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleDelete = async (record) => {
-    if (!window.confirm(`${record.category} kaydi silinsin mi?`)) return;
+  const handleDelete = async (summary) => {
+    if (!window.confirm(`${summary.periodName} cari ozeti silinsin mi?`)) return;
 
     try {
-      await apiClient.delete(`/accounting/records/${record.id}`);
-      toast.success("Cari kayit silindi.");
-      await fetchAccountingData();
+      await apiClient.delete(`/accounting/monthly-summaries/${summary.id}`);
+      toast.success("Cari ozet silindi.");
+      await fetchSummaries();
     } catch (err) {
       console.error(err);
-      toast.error("Kayit silinemedi.");
+      toast.error("Cari ozet silinemedi.");
     }
   };
 
+  const selectedTotal = summaries.reduce((sum, item) => sum + Number(item.totalBalance || 0), 0);
+
   if (loading) {
-    return <Typography className="mt-12 text-center">Cari ekran yukleniyor...</Typography>;
+    return <Typography className="mt-12 text-center">Cari ozet ekrani yukleniyor...</Typography>;
   }
 
   return (
     <div className="mt-12 mb-8 flex flex-col gap-8">
-      <Card>
+      <Card className="relative z-30 overflow-visible">
         <CardHeader
           variant="gradient"
           color="gray"
-          className="mb-4 flex flex-col gap-4 p-6 md:flex-row md:items-center md:justify-between"
+          className="relative z-40 mb-4 flex flex-col gap-4 overflow-visible p-6 md:flex-row md:items-center md:justify-between"
         >
           <div>
             <Typography variant="h6" color="white">
-              Cari Hesaplar
+              Aylik Cari Ozet
             </Typography>
             <Typography variant="small" color="white" className="font-normal opacity-70">
-              Kullanici bazli gelir, gider ve aylik kar zarar takibi
+              Sofor/plaka secerek aylik devir, arti ve eksi bakiye girisi
             </Typography>
           </div>
           <div className="w-full md:w-96">
             <Select
-              label="Kullanici Sec"
-              value={selectedUserId}
-              onChange={(val) => setSelectedUserId(val)}
+              label="Sofor / Plaka"
+              value={formData.vehicleId}
+              onChange={(val) => handleChange("vehicleId", val)}
+              menuProps={selectMenuProps}
+              containerProps={{ className: "relative z-[9999]" }}
             >
-              {users.map((user) => (
-                <Option key={user.id} value={String(user.id)}>
-                  {user.fullName}{" "}
-                  {user.vehicles?.[0]?.licensePlate ? `- ${user.vehicles[0].licensePlate}` : ""}
+              {driverOptions.map((option) => (
+                <Option key={option.vehicleId} value={option.vehicleId}>
+                  {option.label}
                 </Option>
               ))}
             </Select>
@@ -249,38 +252,32 @@ export function AccountingPage() {
         <CardBody className="grid gap-4 md:grid-cols-4">
           <div className="rounded-lg border border-blue-gray-50 p-4">
             <Typography variant="small" className="font-bold uppercase text-blue-gray-400">
-              Kullanici
+              Secili Sofor
             </Typography>
             <Typography className="font-semibold text-blue-gray-700">
-              {selectedUser?.fullName || "-"}
+              {selectedDriver?.userFullName || "-"}
             </Typography>
           </div>
           <div className="rounded-lg border border-blue-gray-50 p-4">
             <Typography variant="small" className="font-bold uppercase text-blue-gray-400">
-              Gelir
+              Plaka
             </Typography>
-            <Typography className="font-semibold text-green-700">
-              {money(summary?.incomeTotal)}
-            </Typography>
-          </div>
-          <div className="rounded-lg border border-blue-gray-50 p-4">
-            <Typography variant="small" className="font-bold uppercase text-blue-gray-400">
-              Gider/Odeme
-            </Typography>
-            <Typography className="font-semibold text-red-700">
-              {money(summary?.outgoingTotal)}
+            <Typography className="font-semibold text-blue-gray-700">
+              {selectedDriver?.licensePlate || "-"}
             </Typography>
           </div>
           <div className="rounded-lg border border-blue-gray-50 p-4">
             <Typography variant="small" className="font-bold uppercase text-blue-gray-400">
-              Bakiye
+              Kayit Sayisi
             </Typography>
-            <Typography
-              className={`font-semibold ${
-                (summary?.balance || 0) >= 0 ? "text-blue-gray-800" : "text-red-700"
-              }`}
-            >
-              {money(summary?.balance)}
+            <Typography className="font-semibold text-blue-gray-700">{summaries.length}</Typography>
+          </div>
+          <div className="rounded-lg border border-blue-gray-50 p-4">
+            <Typography variant="small" className="font-bold uppercase text-blue-gray-400">
+              Listelenen Bakiye
+            </Typography>
+            <Typography className={`font-semibold ${selectedTotal >= 0 ? "text-blue-gray-800" : "text-red-700"}`}>
+              {money(selectedTotal)}
             </Typography>
           </div>
         </CardBody>
@@ -289,89 +286,65 @@ export function AccountingPage() {
       <Card>
         <CardHeader variant="gradient" color="gray" className="mb-4 p-6">
           <Typography variant="h6" color="white">
-            {editingId ? "Cari Kayit Duzenle" : "Yeni Cari Kayit"}
+            {editingId ? "Cari Ozet Duzenle" : "Yeni Cari Ozet"}
           </Typography>
         </CardHeader>
         <CardBody className="grid gap-4 md:grid-cols-4">
-          {selectedUser?.vehicles?.length > 1 && (
-            <Select label="Arac" value={selectedVehicleId} onChange={(val) => setSelectedVehicleId(val)}>
-              {selectedUser.vehicles.map((vehicle) => (
-                <Option key={vehicle.id} value={String(vehicle.id)}>
-                  {vehicle.licensePlate}
-                </Option>
-              ))}
-            </Select>
-          )}
-          <Input
-            type="date"
-            label="Tarih"
-            value={formData.date}
-            onChange={(e) => handleChange("date", e.target.value)}
-          />
-          <Select label="Tip" value={formData.type} onChange={(val) => handleChange("type", val)}>
-            {recordTypes.map((type) => (
-              <Option key={type.value} value={type.value}>
-                {type.label}
-              </Option>
-            ))}
-          </Select>
           <Select
-            label="Kategori"
-            value={formData.category}
-            onChange={(val) => handleChange("category", val)}
+            label="Ay"
+            value={formData.periodMonth}
+            onChange={(val) => handleChange("periodMonth", val)}
+            menuProps={selectMenuProps}
           >
-            {defaultCategories.map((category) => (
-              <Option key={category} value={category}>
-                {category}
+            {months.map((month) => (
+              <Option key={month.value} value={month.value}>
+                {month.label}
               </Option>
             ))}
           </Select>
           <Input
-            label="Firma"
-            value={formData.company}
-            onChange={(e) => handleChange("company", e.target.value)}
+            type="number"
+            label="Yil"
+            value={formData.periodYear}
+            onChange={(e) => handleChange("periodYear", e.target.value)}
           />
           <Input
-            label="Irsaliye No"
-            value={formData.waybillNo}
-            onChange={(e) => handleChange("waybillNo", e.target.value)}
+            type="number"
+            step="0.01"
+            label="Onceki Aydan Devir"
+            value={formData.previousBalance}
+            onChange={(e) => handleChange("previousBalance", e.target.value)}
+          />
+          <Input
+            type="number"
+            step="0.01"
+            label="Arti Tutar"
+            value={formData.incomeAmount}
+            onChange={(e) => handleChange("incomeAmount", e.target.value)}
+          />
+          <Input
+            type="number"
+            step="0.01"
+            label="Eksi Tutar"
+            value={formData.expenseAmount}
+            onChange={(e) => handleChange("expenseAmount", e.target.value)}
           />
           <Input
             label="Aciklama"
             value={formData.description}
             onChange={(e) => handleChange("description", e.target.value)}
           />
-          <Input
-            type="number"
-            step="0.01"
-            label="Ton/Kg"
-            value={formData.quantityKg}
-            onChange={(e) => handleChange("quantityKg", e.target.value)}
-          />
-          <Input
-            type="number"
-            step="0.0001"
-            label="B. Fiyat"
-            value={formData.unitPrice}
-            onChange={(e) => handleChange("unitPrice", e.target.value)}
-          />
-          <Input
-            type="number"
-            step="0.01"
-            label="Tutar"
-            value={formData.amount}
-            onChange={(e) => handleChange("amount", e.target.value)}
-          />
+          <div className="rounded-lg border border-blue-gray-50 p-4 md:col-span-2">
+            <Typography variant="small" className="font-bold uppercase text-blue-gray-400">
+              Toplam Bakiye
+            </Typography>
+            <Typography className={`text-lg font-semibold ${totalBalance >= 0 ? "text-green-700" : "text-red-700"}`}>
+              {money(totalBalance)}
+            </Typography>
+          </div>
           <div className="flex justify-end gap-3 md:col-span-4">
             {editingId && (
-              <Button
-                variant="text"
-                color="blue-gray"
-                onClick={() => {
-                  setEditingId(null);
-                  setFormData(emptyForm);
-                }}
-              >
+              <Button variant="text" color="blue-gray" onClick={resetForm}>
                 Vazgec
               </Button>
             )}
@@ -389,110 +362,58 @@ export function AccountingPage() {
           className="mb-4 flex flex-col gap-4 p-6 md:flex-row md:items-center md:justify-between"
         >
           <Typography variant="h6" color="white">
-            Aylik Ozet
+            Girilen Cari Ozetler
           </Typography>
           <div className="grid w-full gap-3 md:w-auto md:grid-cols-4">
+            <Select
+              label="Plaka"
+              value={filters.vehicleId}
+              onChange={(val) => setFilters({ ...filters, vehicleId: val || "" })}
+              menuProps={selectMenuProps}
+            >
+              {driverOptions.map((option) => (
+                <Option key={option.vehicleId} value={option.vehicleId}>
+                  {option.label}
+                </Option>
+              ))}
+            </Select>
+            <Select
+              label="Ay"
+              value={filters.periodMonth}
+              onChange={(val) => setFilters({ ...filters, periodMonth: val || "" })}
+              menuProps={selectMenuProps}
+            >
+              {months.map((month) => (
+                <Option key={month.value} value={month.value}>
+                  {month.label}
+                </Option>
+              ))}
+            </Select>
             <Input
-              type="date"
-              label="Baslangic"
-              value={filters.startDate}
-              onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
+              type="number"
+              label="Yil"
+              value={filters.periodYear}
+              onChange={(e) => setFilters({ ...filters, periodYear: e.target.value })}
             />
-            <Input
-              type="date"
-              label="Bitis"
-              value={filters.endDate}
-              onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
-            />
-            <Input
-              label="Kategori"
-              value={filters.category}
-              onChange={(e) => setFilters({ ...filters, category: e.target.value })}
-            />
-            <Button color="white" variant="text" onClick={fetchAccountingData}>
+            <Button color="white" variant="text" onClick={fetchSummaries}>
               Filtrele
             </Button>
           </div>
         </CardHeader>
         <CardBody className="overflow-x-auto px-0 pt-0 pb-2">
-          <table className="w-full min-w-[780px] table-auto">
-            <thead>
-              <tr>
-                {["Ay", "Gelir", "Gider", "Odeme", "Kar/Zarar", "Bakiye", "Kayit"].map(
-                  (head) => (
-                    <th key={head} className="border-b border-blue-gray-50 py-3 px-5 text-left">
-                      <Typography variant="small" className="font-bold uppercase text-blue-gray-400">
-                        {head}
-                      </Typography>
-                    </th>
-                  )
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {monthlySummaries.map((item) => (
-                <tr key={`${item.year}-${item.month}`} className="hover:bg-blue-gray-50/50">
-                  <td className="border-b border-blue-gray-50 py-3 px-5 font-semibold">
-                    {item.monthName}
-                  </td>
-                  <td className="border-b border-blue-gray-50 py-3 px-5 text-green-700">
-                    {money(item.incomeTotal)}
-                  </td>
-                  <td className="border-b border-blue-gray-50 py-3 px-5 text-red-700">
-                    {money(item.expenseTotal)}
-                  </td>
-                  <td className="border-b border-blue-gray-50 py-3 px-5 text-red-700">
-                    {money(item.paymentTotal)}
-                  </td>
-                  <td
-                    className={`border-b border-blue-gray-50 py-3 px-5 font-semibold ${
-                      item.profitLoss >= 0 ? "text-green-700" : "text-red-700"
-                    }`}
-                  >
-                    {money(item.profitLoss)}
-                  </td>
-                  <td
-                    className={`border-b border-blue-gray-50 py-3 px-5 font-semibold ${
-                      item.runningBalance >= 0 ? "text-blue-gray-800" : "text-red-700"
-                    }`}
-                  >
-                    {money(item.runningBalance)}
-                  </td>
-                  <td className="border-b border-blue-gray-50 py-3 px-5">{item.recordCount}</td>
-                </tr>
-              ))}
-              {monthlySummaries.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="p-6 text-center text-blue-gray-400">
-                    Aylik ozet bulunamadi.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </CardBody>
-      </Card>
-
-      <Card>
-        <CardHeader variant="gradient" color="gray" className="mb-4 p-6">
-          <Typography variant="h6" color="white">
-            Cari Hareketler
-          </Typography>
-        </CardHeader>
-        <CardBody className="overflow-x-auto px-0 pt-0 pb-2">
-          <table className="w-full min-w-[1040px] table-auto">
+          <table className="w-full min-w-[1100px] table-auto">
             <thead>
               <tr>
                 {[
-                  "Tarih",
+                  "Donem",
+                  "Sofor",
                   "Plaka",
-                  "Tip",
-                  "Kategori",
-                  "Firma",
-                  "Irsaliye",
-                  "Aciklama",
+                  "Devir",
+                  "Arti",
+                  "Eksi",
                   "Toplam",
-                  "Bakiye Etkisi",
+                  "Aciklama",
+                  "Kayit Tarihi",
                   "Islem",
                 ].map((head) => (
                   <th key={head} className="border-b border-blue-gray-50 py-3 px-4 text-left">
@@ -504,53 +425,43 @@ export function AccountingPage() {
               </tr>
             </thead>
             <tbody>
-              {records.map((record) => (
-                <tr key={record.id} className="hover:bg-blue-gray-50/50">
-                  <td className="border-b border-blue-gray-50 py-3 px-4">
-                    {record.date?.slice(0, 10)}
+              {summaries.map((summary) => (
+                <tr key={summary.id} className="hover:bg-blue-gray-50/50">
+                  <td className="border-b border-blue-gray-50 py-3 px-4 font-semibold">{summary.periodName}</td>
+                  <td className="border-b border-blue-gray-50 py-3 px-4">{summary.userFullName || "-"}</td>
+                  <td className="border-b border-blue-gray-50 py-3 px-4">{summary.plateNumber || "-"}</td>
+                  <td className="border-b border-blue-gray-50 py-3 px-4">{money(summary.previousBalance)}</td>
+                  <td className="border-b border-blue-gray-50 py-3 px-4 text-green-700">
+                    {money(summary.incomeAmount)}
                   </td>
-                  <td className="border-b border-blue-gray-50 py-3 px-4 font-semibold">
-                    {record.licensePlate}
-                  </td>
-                  <td className="border-b border-blue-gray-50 py-3 px-4">
-                    {typeLabel(record.type)}
-                  </td>
-                  <td className="border-b border-blue-gray-50 py-3 px-4">{record.category}</td>
-                  <td className="border-b border-blue-gray-50 py-3 px-4">
-                    {record.company || "-"}
-                  </td>
-                  <td className="border-b border-blue-gray-50 py-3 px-4">
-                    {record.waybillNo || "-"}
-                  </td>
-                  <td className="border-b border-blue-gray-50 py-3 px-4">
-                    {record.description || "-"}
-                  </td>
-                  <td className="border-b border-blue-gray-50 py-3 px-4">
-                    {money(record.grossAmount || record.netAmount)}
+                  <td className="border-b border-blue-gray-50 py-3 px-4 text-red-700">
+                    {money(summary.expenseAmount)}
                   </td>
                   <td
                     className={`border-b border-blue-gray-50 py-3 px-4 font-semibold ${
-                      record.balanceEffect >= 0 ? "text-green-700" : "text-red-700"
+                      summary.totalBalance >= 0 ? "text-green-700" : "text-red-700"
                     }`}
                   >
-                    {money(record.balanceEffect)}
+                    {money(summary.totalBalance)}
                   </td>
+                  <td className="border-b border-blue-gray-50 py-3 px-4">{summary.description || "-"}</td>
+                  <td className="border-b border-blue-gray-50 py-3 px-4">{summary.createdAt?.slice(0, 10)}</td>
                   <td className="border-b border-blue-gray-50 py-3 px-4">
                     <div className="flex gap-2">
-                      <Button size="sm" variant="text" color="blue" onClick={() => handleEdit(record)}>
+                      <Button size="sm" variant="text" color="blue" onClick={() => handleEdit(summary)}>
                         Duzenle
                       </Button>
-                      <Button size="sm" variant="text" color="red" onClick={() => handleDelete(record)}>
+                      <Button size="sm" variant="text" color="red" onClick={() => handleDelete(summary)}>
                         Sil
                       </Button>
                     </div>
                   </td>
                 </tr>
               ))}
-              {records.length === 0 && (
+              {summaries.length === 0 && (
                 <tr>
                   <td colSpan={10} className="p-6 text-center text-blue-gray-400">
-                    Cari hareket bulunamadi.
+                    Cari ozet bulunamadi.
                   </td>
                 </tr>
               )}
